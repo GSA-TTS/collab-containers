@@ -4,10 +4,11 @@ applications:
     disk_quota: 1G
     instances: 1
     docker:
-      image: quay.io/hedgedoc/hedgedoc:latest
+      image: gsatts/hedgedoc-custom:latest
     env:
       CMD_DB_URL: sqlite:///data/hedgedoc.sqlite
-      CMD_DOMAIN: hedgedoc.example.com
       CMD_ALLOW_ORIGIN: '*'
-    services:
-      - hedgedoc-storage
+    volume_mounts:
+      - path: /data
+        volume: hedgedoc-data
+    command: "/bin/bash /app/init.sh node app.js"

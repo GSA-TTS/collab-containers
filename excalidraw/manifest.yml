@@ -7,4 +7,3 @@ applications:
       image: excalidraw/excalidraw:latest
     env:
       NODE_ENV: production
-      PORT: 80
