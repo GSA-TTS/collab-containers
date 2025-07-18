@@ -1,0 +1,10 @@
+applications:
+  - name: excalidraw
+    memory: 512M
+    disk_quota: 1G
+    instances: 1
+    docker:
+      image: excalidraw/excalidraw:latest
+    env:
+      NODE_ENV: production
+      PORT: 80

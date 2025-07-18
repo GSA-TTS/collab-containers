@@ -1,0 +1,13 @@
+applications:
+  - name: hedgedoc
+    memory: 512M
+    disk_quota: 1G
+    instances: 1
+    docker:
+      image: quay.io/hedgedoc/hedgedoc:latest
+    env:
+      CMD_DB_URL: sqlite:///data/hedgedoc.sqlite
+      CMD_DOMAIN: hedgedoc.example.com
+      CMD_ALLOW_ORIGIN: '*'
+    services:
+      - hedgedoc-storage
