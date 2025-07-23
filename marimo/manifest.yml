@@ -1,11 +1,11 @@
 ---
 applications:
 - name: marimo-app
-  memory: 4G
-  disk_quota: 1G
+  memory: 2G
+  disk_quota: 2G
   instances: 1
   docker:
-    image: marimo-team/marimo:latest
+    image: ghcr.io/marimo-team/marimo:latest-sql
   routes:
   - route: marimo.app.cloud.gov
   env:
