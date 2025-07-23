@@ -4,11 +4,18 @@ applications:
     disk_quota: 1G
     instances: 1
     docker:
-      image: gsatts/hedgedoc-custom:latest
+      image: quay.io/hedgedoc/hedgedoc:latest
     env:
-      CMD_DB_URL: sqlite:///data/hedgedoc.sqlite
       CMD_ALLOW_ORIGIN: '*'
+      CMD_DB_DIALECT: 'postgres'
+      CMD_LOGLEVEL: 'debug'
     volume_mounts:
       - path: /data
         volume: hedgedoc-data
-    command: "/bin/bash /app/init.sh node app.js"
+    services:
+      - hedgedoc-db
+    command: |
+       export CMD_DB_URL=$DATABASE_URL && \
+       echo $dbURL && \
+       node -e "console.log('dbURL:', process.env.dbURL)" && \
+       node app.js

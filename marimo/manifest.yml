@@ -1,0 +1,20 @@
+---
+applications:
+- name: marimo-app
+  memory: 4G
+  disk_quota: 1G
+  instances: 1
+  docker:
+    image: marimo-team/marimo:latest
+  routes:
+  - route: marimo.app.cloud.gov
+  env:
+    # Basic configuration
+    MARIMO_ADMIN_USER: admin
+    MARIMO_ADMIN_PASSWORD: adminpassword
+    MARIMO_TRUSTED_DOMAINS: marimo.app.cloud.gov
+    MARIMO_OVERWRITEHOST: marimo.app.cloud.gov
+    MARIMO_OVERWRITEPROTOCOL: https
+  volume_mounts:
+  - path: /data
+    volume: marimo-data
