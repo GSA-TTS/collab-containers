@@ -31,20 +31,6 @@ Each folder contains a `manifest.yml` file to deploy an ephemeral container on c
    cf push
    ```
 4. Access the application at the domain specified in the `CMD_DOMAIN` environment variable.
-4. Access the application at the domain specified in the `CMD_DOMAIN` environment variable.
-
-## Environment Variables
-
-### HedgeDoc
-
-- `CMD_DB_URL`: The database URL for HedgeDoc. This is dynamically set using the `VCAP_SERVICES` environment variable.
-- `CMD_DOMAIN`: The domain name for the HedgeDoc instance.
-- `CMD_ALLOW_ORIGIN`: CORS settings for the HedgeDoc instance.
-
-### Excalidraw
-
-- `NODE_ENV`: The environment in which Excalidraw is running (e.g., production).
-- `PORT`: The port on which Excalidraw listens for incoming requests.
 
 ## License
 This project is licensed under the CC0 1.0 Universal (CC0 1.0) Public Domain Dedication. You can copy, modify, distribute, and perform the work, even for commercial purposes, all without asking permission. For more information, please visit [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/).
