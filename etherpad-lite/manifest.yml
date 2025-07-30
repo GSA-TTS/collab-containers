@@ -1,0 +1,26 @@
+---
+applications:
+- name: etherpad-app
+  memory: 1G
+  disk_quota: 1G
+  instances: 1
+  docker:
+    image: etherpad/etherpad:latest
+  routes:
+  - route: etherpad.app.cloud.gov
+  env:
+    # Basic configuration
+    NODE_ENV: production
+    ADMIN_PASSWORD: adminpassword
+    DB_TYPE: postgres
+    DB_HOST: db-host
+    DB_PORT: 5432
+    DB_NAME: etherpad
+    DB_USER: etherpad_user
+    DB_PASS: etherpad_password
+    DEFAULT_PAD_TEXT: "Welcome to Etherpad!"
+    DISABLE_IP_LOGGING: "true"
+    TRUST_PROXY: "true"
+  volume_mounts:
+  - path: /opt/etherpad-lite/var
+    volume: etherpad-data

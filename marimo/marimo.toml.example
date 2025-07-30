@@ -1,0 +1,16 @@
+# Marimo configuration file
+
+[admin]
+# Admin user credentials
+username = "admin"
+password = "adminpassword"
+
+[server]
+# Trusted domains for the application
+trusted_domains = ["marimo.app.cloud.gov"]
+overwrite_host = "marimo.app.cloud.gov"
+overwrite_protocol = "https"
+
+[data]
+# Path to the data directory
+data_dir = "/data"

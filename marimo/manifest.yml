@@ -1,3 +1,4 @@
+#status: 200 working
 ---
 applications:
 - name: marimo-app
@@ -18,3 +19,5 @@ applications:
   volume_mounts:
   - path: /data
     volume: marimo-data
+  - path: /etc/marimo/marimo.toml
+    volume: marimo-config

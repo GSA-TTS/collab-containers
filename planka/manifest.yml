@@ -1,0 +1,20 @@
+---
+applications:
+- name: planka-app
+  memory: 1G
+  disk_quota: 1G
+  instances: 1
+  docker:
+    image: ghcr.io/plankanban/planka:latest
+  routes:
+  - route: planka.app.cloud.gov
+  env:
+    # Basic configuration
+    #DATABASE_URL: $DATABASE_URL same ENV_VAR as VCAP_SERVICES
+    SECRET_KEY: !!str ${RANDOM_SECRET_KEY}
+    BASE_URL: https://planka.app.cloud.gov
+  services:
+  - name: planka-db
+  volume_mounts:
+  - path: /app/data
+    volume: planka-data

@@ -1,0 +1,40 @@
+---
+applications:
+- name: cryptpad-app
+  memory: 2G
+  disk_quota: 2G
+  instances: 1
+  docker:
+    image: cryptpad/cryptpad:version-2025.6.0
+  routes:
+  - route: cryptpad.app.cloud.gov
+  env:
+    # Basic configuration
+    NODE_ENV: production
+    ADMIN_KEY: ${RANDOM_SECRET_KEY}
+    STORAGE_LIMIT: 1800000000 # 1GB in bytes
+    BASE_URL: https://cryptpad.app.cloud.gov
+    TRUST_PROXY: "true"
+  volume_mounts:
+  - path: /cryptpad/blob
+    volume: cryptpad-blob
+  - path: /cryptpad/block
+    volume: cryptpad-block
+  - path: /cryptpad/customize
+    volume: cryptpad-customize
+  - path: /cryptpad/data
+    volume: cryptpad-data
+  - path: /cryptpad/datastore
+    volume: cryptpad-datastore
+  - path: /cryptpad/www/common/onlyoffice/dist
+    volume: cryptpad-onlyoffice-dist
+  - path: /cryptpad/onlyoffice-conf
+    volume: cryptpad-onlyoffice-conf
+  - path: /cryptpad/config/config.js
+    volume: cryptpad-config
+  command: >
+    sh -c "if [ ! -f /cryptpad/config/config.js ]; then
+      echo 'Error: config.js file not found at /cryptpad/config/config.js';
+      exit 1;
+    fi;
+    exec npm start"
