@@ -12,7 +12,7 @@ applications:
   env:
     # Basic configuration
     MARIMO_ADMIN_USER: admin
-    MARIMO_ADMIN_PASSWORD: adminpassword
+    MARIMO_ADMIN_PASSWORD: your-super-secret-and-long-password-to-replace
     MARIMO_TRUSTED_DOMAINS: marimo.app.cloud.gov
     MARIMO_OVERWRITEHOST: marimo.app.cloud.gov
     MARIMO_OVERWRITEPROTOCOL: https

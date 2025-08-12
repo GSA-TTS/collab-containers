@@ -11,7 +11,7 @@ applications:
   env:
     # Basic configuration
     NODE_ENV: production
-    ADMIN_PASSWORD: adminpassword
+    ADMIN_PASSWORD: your-super-secret-and-long-password-to-replace
     DB_TYPE: postgres
     DB_HOST: db-host
     DB_PORT: 5432

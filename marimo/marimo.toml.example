@@ -3,7 +3,7 @@
 [admin]
 # Admin user credentials
 username = "admin"
-password = "adminpassword"
+password = "your-super-secret-and-long-password-to-replace"
 
 [server]
 # Trusted domains for the application
