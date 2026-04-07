@@ -1,0 +1,23 @@
+---
+applications:
+- name: openobserve
+  memory: 2G
+  disk_quota: 2G
+  instances: 1
+  path: .
+  buildpacks:
+  - binary_buildpack
+  #stack: cflinuxfs3
+  routes:
+  - route: openobserve.app.cloud.gov
+  env:
+    # Download OpenObserve binary from latest GitHub release
+    BP_BINARY_URI: "https://github.com/openobserve/openobserve/releases/latest/download/openobserve-linux-amd64.tar.gz"
+    # Root user credentials for OpenObserve
+    ZO_ROOT_USER_EMAIL: "root@example.com"
+    ZO_ROOT_USER_PASSWORD: "Complexpass#123"
+  volume_mounts:
+  - path: /data
+    volume: openobserve-data
+  command: |
+    openobserve --http-host 0.0.0.0 --http-port 3000
