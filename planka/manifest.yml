@@ -37,9 +37,13 @@ applications:
             content = content.replace(
               "issuer = await openidClient.Issuer.discover(sails.config.custom.oidcIssuer);",
               `issuer = await openidClient.Issuer.discover(sails.config.custom.oidcIssuer);
-               if (issuer && issuer.metadata && issuer.metadata.authorization_endpoint) {
-                 issuer.metadata.authorization_endpoint = issuer.metadata.authorization_endpoint.replace("uaa.fr.cloud.gov", "login.fr.cloud.gov");
-                 sails.log.info("Patched OIDC authorization endpoint to use login.fr.cloud.gov");
+               if (issuer && issuer.metadata) {
+                 for (const key in issuer.metadata) {
+                   if (typeof issuer.metadata[key] === "string") {
+                     issuer.metadata[key] = issuer.metadata[key].replace("uaa.fr.cloud.gov", "login.fr.cloud.gov");
+                   }
+                 }
+                 sails.log.info("Patched all OIDC metadata endpoints to use login.fr.cloud.gov");
                }`
             );
             fs.writeFileSync(file, content);

@@ -222,6 +222,23 @@ Both proxies perfectly handle **blanket path and query coverage** (including ass
 
 ---
 
+## Login.gov Integration & Scenarios
+
+For federal government applications, integrating **Login.gov** as the primary authentication provider is highly recommended or federally mandated. Login.gov requires asymmetric OIDC client authentication (`private_key_jwt`), which standard collaboration containers cannot perform natively.
+
+We have published a comprehensive guide: [**Integrating Login.gov as an Auth Provider on Cloud.gov**](./LOGINGOV.md), which details two core operational scenarios:
+
+1. **Scenario A: "Just Need a Session" (Authentication Gatekeeper / Proxy Mode)**
+   * **Best For**: Lightweight, stateless sidecar deployments (e.g., Excalidraw, Marimo, CryptPad) where you just want to gate access with Login.gov and restrict entry using **email domain whitelists** (e.g., `@gsa.gov`) or **individual email allow-lists** without modifying the application code.
+   * **Implementation**: Uses `oauth2-proxy` to handle the asymmetric private-key signing directly, storing sessions in a secure browser cookie.
+2. **Scenario B: "Full IDP" (Application-Managed Identity / Brokered Identity)**
+   * **Best For**: Full-featured, identity-aware collaboration systems (e.g., Outline, HedgeDoc, Planka) where users need persistent user profiles, granular database-bound permissions, and Single Sign-On (SSO) across multiple apps.
+   * **Implementation**: Deploys `keycloak` on Cloud.gov as a central identity broker. Keycloak manages the asymmetric cryptographic relationship with Login.gov and exposes standard, symmetric-secret OIDC endpoints to the downstream collaboration apps.
+
+Refer to [**`LOGINGOV.md`**](./LOGINGOV.md) for step-by-step key generation, registration instructions on the Login.gov Developer Portal, Cloud.gov manifest environment variables, and email allow-list configurations.
+
+---
+
 ## Additional Considerations & Concerns
 
 1. **Dedicated Callback Hosts for Pomerium**
