@@ -34,6 +34,43 @@ applications:
       - path: /data
         volume: outline-data
     command: |
+      echo "Applying GSA WAF path-bypass hotfixes..."
+      node -e '
+        const fs = require("fs");
+        const clientFile = "/opt/outline/build/app/assets/index.qkQpgxox.js";
+        if (fs.existsSync(clientFile)) {
+          let content = fs.readFileSync(clientFile, "utf8");
+          content = content.replace(/auth\.config/g, "auth_config");
+          fs.writeFileSync(clientFile, content);
+          console.log("Successfully patched client-side auth.config to auth_config!");
+        } else {
+          console.log("Client file not found!");
+        }
+      '
+      node -e '
+        const fs = require("fs");
+        const serverFile = "/opt/outline/build/server/services/web.js";
+        if (fs.existsSync(serverFile)) {
+          let content = fs.readFileSync(serverFile, "utf8");
+          if (!content.includes("auth_config")) {
+            content = content.replace(
+              "app.use((0, _koaMount.default)(\"/api\", _api.default));",
+              `app.use(async (ctx, next) => {
+                 if (ctx.path.endsWith("auth_config") || ctx.path.endsWith("auth_config/")) {
+                   ctx.url = ctx.url.replace("auth_config", "auth.config");
+                   ctx.path = ctx.path.replace("auth_config", "auth.config");
+                 }
+                 await next();
+               });
+               app.use((0, _koaMount.default)("/api", _api.default));`
+            );
+            fs.writeFileSync(serverFile, content);
+            console.log("Successfully injected global-side path-rewrite middleware!");
+          }
+        } else {
+          console.log("Server file not found!");
+        }
+      '
       if [ -z "$DATABASE_URL" ] && [ -n "$VCAP_SERVICES" ]; then
         export DATABASE_URL=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.uri || "");')
       fi
