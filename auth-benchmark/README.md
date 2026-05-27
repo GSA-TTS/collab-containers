@@ -18,9 +18,60 @@ The benchmark is split into three cohorts:
 
 ## Architecture
 
-1. Deploy the fixture app at `https://auth-bench-fixture.app.cloud.gov`.
+```mermaid
+graph TD
+    User([User Browser]) :::accent0 -->|1. Public Route| Router[Cloud.gov Gorouter] :::accent2
+    
+    subgraph Proxy Cohorts
+        Router -->|oauth2-proxy-staging.app.cloud.gov| OAuthProxy[oauth2-proxy App] :::accent1
+        Router -->|pomerium-staging.app.cloud.gov| Pomerium[Pomerium App] :::accent1
+    end
+    
+    subgraph Isolated Upstreams
+        OAuthProxy -->|Pass Host: false| FixtureOAuth[Dedicated Fixture App For OAuth] :::accent3
+        Pomerium -->|Direct Forward| FixturePom[Dedicated Fixture App For Pomerium] :::accent3
+    end
+    
+    subgraph Identity Brokerage
+        OAuthProxy -.->|OIDC Discovery & Callback| UAA[login.fr.cloud.gov] :::accent4
+        Pomerium -.->|OIDC Discovery & Callback| UAA
+        UAA <-->|SAML Federation| SecureAuth[GSA Secure Auth / PIV] :::accent5
+    end
+
+    classDef default fill:#333,stroke:#fff,stroke-width:1px;
+```
+
+### SAML / OIDC Single Sign-On Flow (Domain Unification)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Browser as User Browser
+    participant Proxy as Proxy App (oauth2-proxy/Pomerium)
+    participant UAA as Cloud.gov UAA (login.fr.cloud.gov)
+    participant SAML as GSA Secure Auth (IdP)
+
+    Browser->>Proxy: GET / (Unauthenticated)
+    Proxy-->>Browser: 302 Redirect to OIDC authorize endpoint
+    Note over Browser,UAA: Redirection target is unified on login.fr.cloud.gov
+    Browser->>UAA: GET /oauth/authorize?...
+    Note over UAA: UAA sets a request cookie (JSESSIONID) on login.fr.cloud.gov
+    UAA-->>Browser: 302 Redirect to GSA SAML IdP
+    Browser->>SAML: GET /SAML2/SSO
+    Note over Browser,SAML: User authenticates with PIV card / GSA credentials
+    SAML-->>Browser: HTML form (SAML Assertion POST)
+    Note over Browser,UAA: Browser POSTs SAML response back to login.fr.cloud.gov/saml/SSO
+    Browser->>UAA: POST /saml/SSO (includes JSESSIONID cookie)
+    Note over UAA: Cookie matches perfectly because domains are unified. login.fr.cloud.gov resolves InResponseTo.
+    UAA-->>Browser: 302 Redirect back to Proxy Callback
+    Browser->>Proxy: GET /oauth2/callback?code=...
+    Proxy->>UAA: Backchannel Exchange (resolves token with client_secret)
+    Proxy-->>Browser: Set session cookie & drop off at Fixture App
+```
+
+1. Deploy the fixture apps (dedicated per candidate for perfect isolation).
 2. Deploy one candidate proxy per public hostname, each configured against its own `cloud-gov-identity-provider` service instance.
-3. Start with the fixture app as the upstream.
+3. Start with the dedicated fixture apps as the upstream.
 4. After smoke tests pass, switch `upstream_url` in the vars file to any collaboration container route you want to protect.
 
 The default public host pattern is one protected hostname per candidate, for example:
@@ -128,6 +179,29 @@ A comprehensive, weighted evaluation was conducted on each candidate in the `sta
    Pomerium stands out as the ultimate gatekeeper for deploying multiple collaboration containers (HedgeDoc, Excalidraw, Planka, etc.) under a single, highly available proxy layer. It supports robust, context-aware policy enforcement natively, and signs downstream requests with safe, verifiable **JWT Assertions** so that collaboration containers can trust identity context without directly querying an external IdP.
 2. **For Lightweight, Single-App Sidecars: Choose oauth2-proxy**
    If you are wrapping a single, isolated application with basic OIDC protection, `oauth2-proxy` is a flawless choice. It runs in a tiny footprint (~20MB RAM), is completely stateless, boots instantly, and scales out horizontally with zero infrastructure complexity.
+
+---
+
+## Architectural Decision Records & Decision-Making Documentation
+
+During live validation of the benchmark cohort in GSA's `staging` environment on Cloud.gov, several platform-level, browser-privacy, and cryptographic constraints were analyzed and solved. This documentation serves as the official record of those architectural decisions.
+
+### ADR 1: Domain Unification for GSA SAML SSO (InResponseTo Resolution)
+* **Context**: Logging in via GSA Secure Auth SAML SSO returned the error: `The response contained an InResponseTo attribute [...] but no saved authentication request was found`.
+* **Problem**: Cloud.gov UAA operates on a split-domain architecture: `uaa.fr.cloud.gov` for backchannel server-to-server exchanges, and `login.fr.cloud.gov` for user-facing browser logins. When a proxy redirected browser traffic to `uaa.fr.cloud.gov/oauth/authorize`, the browser request cookie (`JSESSIONID`) was set on `uaa.fr.cloud.gov`. However, GSA Secure Auth strictly POSTs the SAML assertion back to the ACS URL on `login.fr.cloud.gov/saml/SSO`. Since cookies are not shared across domains, UAA on `login` could not find the request session state and crashed.
+* **Decision**: We unified the browser-facing domain to `https://login.fr.cloud.gov/oauth/token` for OIDC discovery. Since `oauth2-proxy` supports `--insecure-oidc-skip-issuer-verification`, it can perform discovery entirely on the user-facing domain `login.fr.cloud.gov` while bypassing the OIDC issuer mismatch verification check. **Pomerium, due to its strict compliance with the core OIDC specification, lacks this bypass flag and remains fundamentally incompatible with GSA SAML SSO on Cloud.gov.**
+
+### ADR 2: Private Container-to-Container Routing (HTTP 463 Loop Resolution)
+* **Context**: Authenticated proxy traffic to the public fixture app returned a `502 Bad Gateway` or `HTTP ERROR 463` on the AWS/Gorouter.
+* **Problem**: By default, proxies were configured with a public `upstream_url` pointing back to Gorouter (e.g., `https://auth-bench-fixture-staging.app.cloud.gov`). Because the proxies had Host-Header pass-through enabled, they forwarded the browser's Host header (`auth-bench-oauth2-proxy-staging.app.cloud.gov`). When Gorouter received this proxied request, it parsed the Host header and routed it back to the proxy app, causing an infinite loop. This quickly filled up the `X-Forwarded-For` header, triggering AWS's loop protection check with HTTP `463`.
+* **Decision**: We migrated both proxy cohorts to use **Cloud.gov private container-to-container routing**. We mapped the private `apps.internal` routes to both dedicated fixture apps, established secure network policies on port `8080`, and updated the upstreams to use the secure private overlay:
+  * `upstream_url: http://auth-bench-fixture-oauth2-proxy-staging.apps.internal:8080`
+  This completely removes public Gorouter hops from the proxy-to-fixture path, permanently resolving the HTTP `463` loop and increasing routing speed and security.
+
+### ADR 3: Unverified Email Bypass for Federated Identities (HTTP 500 Resolution)
+* **Context**: Redeeming the OIDC authorization code at the proxy callback returned an HTTP `500` error: `Error redeeming code during OAuth2 callback: email in id_token (john.jediny@gsa.gov) isn't verified`.
+* **Problem**: `oauth2-proxy` strictly expects the OIDC ID Token to contain a `"email_verified": true` claim. Because Cloud.gov UAA's SAML federation with GSA Secure Auth does not output this specific `"email_verified"` boolean flag in the token claims payload, `oauth2-proxy` rejected the assertion.
+* **Decision**: We enabled `OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL="true"` (equivalent to `--insecure-oidc-allow-unverified-email`). Since all GSA federated accounts are fundamentally verified by GSA Secure Auth/PIV cards during SAML login, this bypass is fully secure and represents the standard configuration pattern for federated OIDC clients on Cloud.gov.
 
 ---
 
