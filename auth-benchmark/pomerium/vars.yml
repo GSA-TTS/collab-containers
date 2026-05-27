@@ -2,7 +2,7 @@ app_name: auth-bench-pomerium-staging
 protected_host: auth-bench-pomerium-staging.app.cloud.gov
 authenticate_host: auth-bench-pomerium-auth-staging.app.cloud.gov
 uaa_service_name: auth-bench-pomerium-staging-uaa
-upstream_url: https://auth-bench-fixture-staging.app.cloud.gov
+upstream_url: https://auth-bench-fixture-pomerium-staging.app.cloud.gov
 cookie_domain: auth-bench-pomerium-staging.app.cloud.gov
 cookie_secret: tBgvHHwxa1ZUI2bbwtWuYJIq8q9nsku5fWdyLDwg9TM=
 shared_secret: CLr0wFx7jVTjtfqDRLGcITTkyk3I9Y0lE2Zn2BZ01AE=

@@ -1,7 +1,7 @@
 app_name: auth-bench-oauth2-proxy-staging
 protected_host: auth-bench-oauth2-proxy-staging.app.cloud.gov
 uaa_service_name: auth-bench-oauth2-proxy-staging-uaa
-upstream_url: https://auth-bench-fixture-staging.app.cloud.gov
+upstream_url: https://auth-bench-fixture-oauth2-proxy-staging.app.cloud.gov
 cookie_secret: tew9QFTQEuqUf_nZVQr9Oc2N7Nc0H_T6D3T5ZMxHvNU
 cookie_domain: auth-bench-oauth2-proxy-staging.app.cloud.gov
 whitelist_domain: .app.cloud.gov
