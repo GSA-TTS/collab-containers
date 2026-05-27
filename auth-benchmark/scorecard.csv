@@ -1,0 +1,6 @@
+candidate,coverage_model_20,host_routing_20,auth_capabilities_15,transparency_15,policy_expressiveness_15,operability_15,weighted_total,notes
+oauth2-proxy,20,12,14,11,6,15,78,Ideal baseline for simple single-app fronting; extremely low footprint and stateless
+pomerium,18,20,15,15,15,13,96,Outstanding routing control and expressiveness; requires an authenticate route but offers rich policies
+keycloak,12,5,15,12,13,6,63,Brokered authority cohort; compare separately from thin proxy cohort. Requires heavy JVM and DB footprint
+authentik,10,16,14,13,14,5,72,Feature-rich but heavy footprint; requires multi-service stack and post-deploy manual bootstrap
+authelia,8,5,12,11,10,11,57,Architecture control; not a direct Cloud.gov UAA upstream client. Requires a separate companion proxy

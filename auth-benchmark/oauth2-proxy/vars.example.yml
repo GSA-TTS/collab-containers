@@ -1,0 +1,8 @@
+app_name: auth-bench-oauth2-proxy
+protected_host: auth-bench-oauth2-proxy.app.cloud.gov
+uaa_service_name: auth-bench-oauth2-proxy-uaa
+upstream_url: https://auth-bench-fixture.app.cloud.gov
+cookie_secret: replace-with-32-byte-base64-secret
+cookie_domain: auth-bench-oauth2-proxy.app.cloud.gov
+whitelist_domain: .app.cloud.gov
+uaa_scope: openid

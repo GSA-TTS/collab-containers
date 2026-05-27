@@ -1,0 +1,61 @@
+applications:
+  - name: ((app_name))
+    memory: 256M
+    disk_quota: 512M
+    instances: 1
+    docker:
+      image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0-alpine
+    routes:
+      - route: ((protected_host))
+    env:
+      UAA_SERVICE_NAME: ((uaa_service_name))
+      UPSTREAM_URL: ((upstream_url))
+      PROTECTED_HOST: ((protected_host))
+      OAUTH2_PROXY_COOKIE_SECRET: ((cookie_secret))
+      COOKIE_DOMAIN: ((cookie_domain))
+      WHITELIST_DOMAIN: ((whitelist_domain))
+      UAA_SCOPE: ((uaa_scope))
+    services:
+      - name: ((uaa_service_name))
+        parameters:
+          redirect_uri:
+            - https://((protected_host))/oauth2/callback
+    command: |
+      set -eu
+      export PORT="${PORT:-4180}"
+
+      # Parse credentials from VCAP_SERVICES using robust busybox grep/cut
+      CLIENT_ID=$(echo "$VCAP_SERVICES" | grep -oE '"client_id": *"[^"]+"' | head -n1 | cut -d'"' -f4)
+      CLIENT_SECRET=$(echo "$VCAP_SERVICES" | grep -oE '"client_secret": *"[^"]+"' | head -n1 | cut -d'"' -f4)
+      DISCOVERY_URL=$(echo "$VCAP_SERVICES" | grep -oE '"discovery_url": *"[^"]+"' | head -n1 | cut -d'"' -f4 || echo "")
+
+      if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
+        echo "Error: Failed to parse UAA credentials from VCAP_SERVICES" >&2
+        echo "VCAP_SERVICES was: $VCAP_SERVICES" >&2
+        exit 1
+      fi
+
+      if [ -n "$DISCOVERY_URL" ]; then
+        ISSUER_URL="https://uaa.fr.cloud.gov/oauth/token"
+      else
+        ISSUER_URL="https://uaa.fr.cloud.gov/oauth/token"
+      fi
+
+      export OAUTH2_PROXY_PROVIDER="oidc"
+      export OAUTH2_PROXY_CLIENT_ID="$CLIENT_ID"
+      export OAUTH2_PROXY_CLIENT_SECRET="$CLIENT_SECRET"
+      export OAUTH2_PROXY_OIDC_ISSUER_URL="$ISSUER_URL"
+      export OAUTH2_PROXY_HTTP_ADDRESS="0.0.0.0:${PORT}"
+      export OAUTH2_PROXY_REDIRECT_URL="https://${PROTECTED_HOST}/oauth2/callback"
+      export OAUTH2_PROXY_UPSTREAMS="${UPSTREAM_URL}"
+      export OAUTH2_PROXY_COOKIE_DOMAINS="${COOKIE_DOMAIN}"
+      export OAUTH2_PROXY_WHITELIST_DOMAINS="${WHITELIST_DOMAIN}"
+      export OAUTH2_PROXY_EMAIL_DOMAINS="*"
+      export OAUTH2_PROXY_COOKIE_SECURE="true"
+      export OAUTH2_PROXY_COOKIE_SAMESITE="lax"
+      export OAUTH2_PROXY_PASS_HOST_HEADER="true"
+      export OAUTH2_PROXY_REVERSE_PROXY="true"
+      export OAUTH2_PROXY_SKIP_PROVIDER_BUTTON="true"
+      export OAUTH2_PROXY_SCOPE="${UAA_SCOPE}"
+
+      exec oauth2-proxy

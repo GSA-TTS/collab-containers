@@ -1,0 +1,47 @@
+applications:
+  - name: ((app_name))
+    memory: 1G
+    disk_quota: 1G
+    instances: 1
+    docker:
+      image: ghcr.io/gsa-tts/terraform-cloudgov/keycloak-server:latest
+    routes:
+      - route: ((public_host))
+    env:
+      RDS_SERVICE_NAME: ((rds_service_name))
+      KC_HOSTNAME: ((public_host))
+      KC_HTTP_ENABLED: 'true'
+      KC_PROXY_HEADERS: 'xforwarded'
+      KC_HOSTNAME_STRICT: 'true'
+      KC_BOOTSTRAP_ADMIN_USERNAME: ((bootstrap_admin_username))
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ((bootstrap_admin_password))
+    services:
+      - ((rds_service_name))
+    command: |
+      set -euo pipefail
+      export DATABASE_URL=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const entries = Object.entries(services).flatMap(([label, items]) => (items || []).map(item => ({ ...item, label }))); const target = process.env.RDS_SERVICE_NAME; const service = entries.find(item => item.name === target || item.instance_name === target) || entries.find(item => item.label === "aws-rds"); const creds = (service || {}).credentials || {}; process.stdout.write(creds.uri || process.env.DATABASE_URL || "");')
+      if [ -z "$DATABASE_URL" ]; then
+        echo "DATABASE_URL is not set. Bind an aws-rds service before starting Keycloak."
+        exit 1
+      fi
+      URI_NO_SCHEME="${DATABASE_URL#*://}"
+      USERPASS="${URI_NO_SCHEME%@*}"
+      HOSTDB="${URI_NO_SCHEME#*@}"
+      export KC_DB_USERNAME="${USERPASS%%:*}"
+      export KC_DB_PASSWORD="${USERPASS#*:}"
+      HOSTPORT="${HOSTDB%%/*}"
+      export KC_DB_DATABASE="${HOSTDB#*/}"
+      if echo "$HOSTPORT" | grep -q ':'; then
+        export KC_DB_HOST="${HOSTPORT%%:*}"
+        export KC_DB_PORT="${HOSTPORT##*:}"
+      else
+        export KC_DB_HOST="$HOSTPORT"
+        export KC_DB_PORT="5432"
+      fi
+      export KC_DB="postgres"
+      export KC_DB_URL="jdbc:postgresql://${KC_DB_HOST}:${KC_DB_PORT}/${KC_DB_DATABASE}"
+      export KC_HTTP_PORT="${PORT}"
+      export KC_TRUSTSTORE_PATHS="/etc/ssl/certs/ca-bundle.crt,/etc/cf-system-certificates"
+      exec /opt/keycloak/bin/kc.sh start \
+        --spi-events-listener--jboss-logging--success-level=info \
+        --spi-events-listener--jboss-logging--error-level=warn

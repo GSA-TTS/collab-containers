@@ -1,0 +1,3 @@
+app_name: auth-bench-fixture-staging
+public_host: auth-bench-fixture-staging.app.cloud.gov
+benchmark_name: auth-bench-fixture-staging
