@@ -11,6 +11,9 @@ applications:
     env:
       # Basic configuration
       BASE_URL: https://planka.app.cloud.gov
+      OIDC_ISSUER: https://uaa.fr.cloud.gov/oauth/token
+      OIDC_USERNAME_ATTRIBUTE: user_name
+      OIDC_NAME_ATTRIBUTE: user_name
     services:
       - planka-db
     volume_mounts:
@@ -24,8 +27,40 @@ applications:
         echo "DATABASE_URL is not set. Bind an aws-rds service before starting Planka."
         exit 1
       fi
+      echo "Applying Planka OIDC Cloud.gov split-domain patch..."
+      node -e '
+        const fs = require("fs");
+        const file = "/app/api/hooks/oidc/index.js";
+        if (fs.existsSync(file)) {
+          let content = fs.readFileSync(file, "utf8");
+          if (!content.includes("login.fr.cloud.gov")) {
+            content = content.replace(
+              "issuer = await openidClient.Issuer.discover(sails.config.custom.oidcIssuer);",
+              `issuer = await openidClient.Issuer.discover(sails.config.custom.oidcIssuer);
+               if (issuer && issuer.metadata && issuer.metadata.authorization_endpoint) {
+                 issuer.metadata.authorization_endpoint = issuer.metadata.authorization_endpoint.replace("uaa.fr.cloud.gov", "login.fr.cloud.gov");
+                 sails.log.info("Patched OIDC authorization endpoint to use login.fr.cloud.gov");
+               }`
+            );
+            fs.writeFileSync(file, content);
+            console.log("Successfully patched Planka OIDC hook for Cloud.gov split-domain UAA!");
+          }
+        } else {
+          console.log("OIDC hook file not found!");
+        }
+      '
       export PGSSLMODE=no-verify
+      export KNEX_REJECT_UNAUTHORIZED_SSL_CERTIFICATE=false
+      if [ -z "$OIDC_CLIENT_ID" ] && [ -n "$VCAP_SERVICES" ]; then
+        export OIDC_CLIENT_ID=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["cloud-gov-identity-provider"] || []).find(s => s.name === "planka-uaa") || {}).credentials || {}; process.stdout.write(creds.client_id || "");')
+      fi
+      if [ -z "$OIDC_CLIENT_SECRET" ] && [ -n "$VCAP_SERVICES" ]; then
+        export OIDC_CLIENT_SECRET=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["cloud-gov-identity-provider"] || []).find(s => s.name === "planka-uaa") || {}).credentials || {}; process.stdout.write(creds.client_secret || "");')
+      fi
       export SECRET_KEY="${SECRET_KEY:-$(node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')}"
+      echo "Running Planka database migrations..."
+      node /app/node_modules/knex/bin/cli.js migrate:latest --cwd /app/db
+      node /app/db/init.js
       echo "Starting Planka..."
       if [ -f /app/docker-entrypoint.sh ]; then
         exec /app/docker-entrypoint.sh node app.js

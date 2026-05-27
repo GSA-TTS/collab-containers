@@ -15,6 +15,18 @@ applications:
       ENABLE_UPDATES: "false"
       FILE_STORAGE: local
       FILE_STORAGE_LOCAL_DIR: /data
+      OIDC_DISPLAY_NAME: "cloud.gov"
+      OIDC_AUTH_URI: "https://login.fr.cloud.gov/oauth/authorize"
+      OIDC_TOKEN_URI: "https://uaa.fr.cloud.gov/oauth/token"
+      OIDC_USERINFO_URI: "https://uaa.fr.cloud.gov/userinfo"
+      OIDC_USERNAME_FIELD: "user_name"
+      OIDC_SCOPES: "openid profile email"
+      AWS_ACCESS_KEY_ID: "placeholder"
+      AWS_SECRET_ACCESS_KEY: "placeholder"
+      AWS_REGION: "us-east-1"
+      AWS_S3_UPLOAD_BUCKET_URL: "https://placeholder-bucket.s3.amazonaws.com"
+      AWS_S3_UPLOAD_BUCKET_NAME: "placeholder-bucket"
+      AWS_S3_UPLOAD_MAX_SIZE: "26214400"
     services:
       - outline-db
       - outline-redis
@@ -22,6 +34,43 @@ applications:
       - path: /data
         volume: outline-data
     command: |
+      echo "Applying GSA WAF path-bypass hotfixes..."
+      node -e '
+        const fs = require("fs");
+        const clientFile = "/opt/outline/build/app/assets/index.qkQpgxox.js";
+        if (fs.existsSync(clientFile)) {
+          let content = fs.readFileSync(clientFile, "utf8");
+          content = content.replace(/auth\.config/g, "auth_config");
+          fs.writeFileSync(clientFile, content);
+          console.log("Successfully patched client-side auth.config to auth_config!");
+        } else {
+          console.log("Client file not found!");
+        }
+      '
+      node -e '
+        const fs = require("fs");
+        const serverFile = "/opt/outline/build/server/services/web.js";
+        if (fs.existsSync(serverFile)) {
+          let content = fs.readFileSync(serverFile, "utf8");
+          if (!content.includes("auth_config")) {
+            content = content.replace(
+              "app.use((0, _koaMount.default)(\"/api\", _api.default));",
+              `app.use(async (ctx, next) => {
+                 if (ctx.path.endsWith("auth_config") || ctx.path.endsWith("auth_config/")) {
+                   ctx.url = ctx.url.replace("auth_config", "auth.config");
+                   ctx.path = ctx.path.replace("auth_config", "auth.config");
+                 }
+                 await next();
+               });
+               app.use((0, _koaMount.default)("/api", _api.default));`
+            );
+            fs.writeFileSync(serverFile, content);
+            console.log("Successfully injected global-side path-rewrite middleware!");
+          }
+        } else {
+          console.log("Server file not found!");
+        }
+      '
       if [ -z "$DATABASE_URL" ] && [ -n "$VCAP_SERVICES" ]; then
         export DATABASE_URL=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.uri || "");')
       fi
@@ -35,6 +84,12 @@ applications:
       if [ -z "$REDIS_URL" ]; then
         echo "REDIS_URL is not set. Bind an aws-elasticache-redis service before starting Outline."
         exit 1
+      fi
+      if [ -z "$OIDC_CLIENT_ID" ] && [ -n "$VCAP_SERVICES" ]; then
+        export OIDC_CLIENT_ID=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["cloud-gov-identity-provider"] || []).find(s => s.name === "outline-uaa") || {}).credentials || {}; process.stdout.write(creds.client_id || "");')
+      fi
+      if [ -z "$OIDC_CLIENT_SECRET" ] && [ -n "$VCAP_SERVICES" ]; then
+        export OIDC_CLIENT_SECRET=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["cloud-gov-identity-provider"] || []).find(s => s.name === "outline-uaa") || {}).credentials || {}; process.stdout.write(creds.client_secret || "");')
       fi
       export PGSSLMODE=require
       export DATABASE_REJECT_UNAUTHORIZED=false
