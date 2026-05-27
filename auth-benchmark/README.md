@@ -18,9 +18,60 @@ The benchmark is split into three cohorts:
 
 ## Architecture
 
-1. Deploy the fixture app at `https://auth-bench-fixture.app.cloud.gov`.
+```mermaid
+graph TD
+    User([User Browser]) :::accent0 -->|1. Public Route| Router[Cloud.gov Gorouter] :::accent2
+    
+    subgraph Proxy Cohorts
+        Router -->|oauth2-proxy-staging.app.cloud.gov| OAuthProxy[oauth2-proxy App] :::accent1
+        Router -->|pomerium-staging.app.cloud.gov| Pomerium[Pomerium App] :::accent1
+    end
+    
+    subgraph Isolated Upstreams
+        OAuthProxy -->|Pass Host: false| FixtureOAuth[Dedicated Fixture App For OAuth] :::accent3
+        Pomerium -->|Direct Forward| FixturePom[Dedicated Fixture App For Pomerium] :::accent3
+    end
+    
+    subgraph Identity Brokerage
+        OAuthProxy -.->|OIDC Discovery & Callback| UAA[login.fr.cloud.gov] :::accent4
+        Pomerium -.->|OIDC Discovery & Callback| UAA
+        UAA <-->|SAML Federation| SecureAuth[GSA Secure Auth / PIV] :::accent5
+    end
+
+    classDef default fill:#333,stroke:#fff,stroke-width:1px;
+```
+
+### SAML / OIDC Single Sign-On Flow (Domain Unification)
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Browser as User Browser
+    participant Proxy as Proxy App (oauth2-proxy/Pomerium)
+    participant UAA as Cloud.gov UAA (login.fr.cloud.gov)
+    participant SAML as GSA Secure Auth (IdP)
+
+    Browser->>Proxy: GET / (Unauthenticated)
+    Proxy-->>Browser: 302 Redirect to OIDC authorize endpoint
+    Note over Browser,UAA: Redirection target is unified on login.fr.cloud.gov
+    Browser->>UAA: GET /oauth/authorize?...
+    Note over UAA: UAA sets a request cookie (JSESSIONID) on login.fr.cloud.gov
+    UAA-->>Browser: 302 Redirect to GSA SAML IdP
+    Browser->>SAML: GET /SAML2/SSO
+    Note over Browser,SAML: User authenticates with PIV card / GSA credentials
+    SAML-->>Browser: HTML form (SAML Assertion POST)
+    Note over Browser,UAA: Browser POSTs SAML response back to login.fr.cloud.gov/saml/SSO
+    Browser->>UAA: POST /saml/SSO (includes JSESSIONID cookie)
+    Note over UAA: Cookie matches perfectly because domains are unified. login.fr.cloud.gov resolves InResponseTo.
+    UAA-->>Browser: 302 Redirect back to Proxy Callback
+    Browser->>Proxy: GET /oauth2/callback?code=...
+    Proxy->>UAA: Backchannel Exchange (resolves token with client_secret)
+    Proxy-->>Browser: Set session cookie & drop off at Fixture App
+```
+
+1. Deploy the fixture apps (dedicated per candidate for perfect isolation).
 2. Deploy one candidate proxy per public hostname, each configured against its own `cloud-gov-identity-provider` service instance.
-3. Start with the fixture app as the upstream.
+3. Start with the dedicated fixture apps as the upstream.
 4. After smoke tests pass, switch `upstream_url` in the vars file to any collaboration container route you want to protect.
 
 The default public host pattern is one protected hostname per candidate, for example:
