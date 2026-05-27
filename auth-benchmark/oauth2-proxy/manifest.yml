@@ -35,16 +35,14 @@ applications:
         exit 1
       fi
 
-      if [ -n "$DISCOVERY_URL" ]; then
-        ISSUER_URL="https://uaa.fr.cloud.gov/oauth/token"
-      else
-        ISSUER_URL="https://uaa.fr.cloud.gov/oauth/token"
-      fi
+      ISSUER_URL="https://uaa.fr.cloud.gov/oauth/token"
 
       export OAUTH2_PROXY_PROVIDER="oidc"
       export OAUTH2_PROXY_CLIENT_ID="$CLIENT_ID"
       export OAUTH2_PROXY_CLIENT_SECRET="$CLIENT_SECRET"
       export OAUTH2_PROXY_OIDC_ISSUER_URL="$ISSUER_URL"
+      export OAUTH2_PROXY_LOGIN_URL="https://login.fr.cloud.gov/oauth/authorize"
+      export OAUTH2_PROXY_REDEEM_URL="https://login.fr.cloud.gov/oauth/token"
       export OAUTH2_PROXY_HTTP_ADDRESS="0.0.0.0:${PORT}"
       export OAUTH2_PROXY_REDIRECT_URL="https://${PROTECTED_HOST}/oauth2/callback"
       export OAUTH2_PROXY_UPSTREAMS="${UPSTREAM_URL}"
