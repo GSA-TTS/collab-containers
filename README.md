@@ -16,6 +16,7 @@ Each folder contains a `manifest.yml` file to deploy an ephemeral container on c
 | [Outline](https://github.com/outline/outline)     | ❌ Failing | Missing/invalid secrets or AWS config in environment variables. | [outline](./outline/) |
 | [Planka](https://github.com/plankanban/planka)      | ❌ Failing | Database not reachable or `DATABASE_URL` misconfigured. | [planka](./planka/) |
 | [CryptPad](https://github.com/xwiki-labs/cryptpad)    | ❌ Failing | `config.js` not found at `/cryptpad/config/config.js` or ENV var issues. | [cryptpad](./cryptpad/) |
+| Auth proxy benchmark | 🧪 Experimental | Cloud.gov UAA benchmark harness and proxy manifests. | [auth-benchmark](./auth-benchmark/) |
 
 ## Others?
 [Create an Issue](https://github.com/GSA-TTS/collab-containers/issues/new) or Open a PR
@@ -31,6 +32,10 @@ Each folder contains a `manifest.yml` file to deploy an ephemeral container on c
    cf push
    ```
 4. Access the application at the domain specified in the `CMD_DOMAIN` environment variable.
+
+## Benchmarking Auth Proxies
+
+Use [auth-benchmark](./auth-benchmark/) to compare UAA-backed auth proxies in front of fixture apps or any of the deployed collaboration containers in this repository.
 
 ## License
 This project is licensed under the CC0 1.0 Universal (CC0 1.0) Public Domain Dedication. You can copy, modify, distribute, and perform the work, even for commercial purposes, all without asking permission. For more information, please visit [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/).

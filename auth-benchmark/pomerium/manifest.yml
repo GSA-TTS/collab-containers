@@ -1,0 +1,68 @@
+applications:
+  - name: ((app_name))
+    memory: 256M
+    disk_quota: 512M
+    instances: 1
+    buildpacks:
+      - binary_buildpack
+    path: .
+    routes:
+      - route: ((protected_host))
+      - route: ((authenticate_host))
+    env:
+      UAA_SERVICE_NAME: ((uaa_service_name))
+      PROTECTED_HOST: ((protected_host))
+      AUTHENTICATE_HOST: ((authenticate_host))
+      UPSTREAM_URL: ((upstream_url))
+      COOKIE_DOMAIN: ((cookie_domain))
+      COOKIE_SECRET: ((cookie_secret))
+      SHARED_SECRET: ((shared_secret))
+    services:
+      - name: ((uaa_service_name))
+        parameters:
+          redirect_uri:
+            - https://((authenticate_host))/oauth2/callback
+    command: |
+      set -eu
+      export PORT="${PORT:-3000}"
+
+      # Download Pomerium binary dynamically if not present to keep git small
+      if [ ! -f ./pomerium ]; then
+        echo "Pomerium binary not found, downloading v0.32.7..."
+        curl -sL -O https://github.com/pomerium/pomerium/releases/download/v0.32.7/pomerium-linux-amd64.tar.gz
+        tar -xzf pomerium-linux-amd64.tar.gz
+        rm -f pomerium-linux-amd64.tar.gz LICENSE README.md
+        chmod +x ./pomerium
+      fi
+
+      # Parse credentials from VCAP_SERVICES using robust busybox grep/cut
+      CLIENT_ID=$(echo "$VCAP_SERVICES" | grep -oE '"client_id": *"[^"]+"' | head -n1 | cut -d'"' -f4)
+      CLIENT_SECRET=$(echo "$VCAP_SERVICES" | grep -oE '"client_secret": *"[^"]+"' | head -n1 | cut -d'"' -f4)
+
+      if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
+        echo "Error: Failed to parse UAA credentials from VCAP_SERVICES" >&2
+        echo "VCAP_SERVICES was: $VCAP_SERVICES" >&2
+        exit 1
+      fi
+
+      ISSUER_URL="https://uaa.fr.cloud.gov/oauth/token"
+
+      printf '%s\n' \
+        "address: :${PORT}" \
+        "insecure_server: true" \
+        "authenticate_service_url: https://${AUTHENTICATE_HOST}" \
+        "cookie_domain: ${COOKIE_DOMAIN}" \
+        "cookie_secret: ${COOKIE_SECRET}" \
+        "shared_secret: ${SHARED_SECRET}" \
+        "idp_provider: oidc" \
+        "idp_provider_url: ${ISSUER_URL}" \
+        "idp_client_id: ${CLIENT_ID}" \
+        "idp_client_secret: ${CLIENT_SECRET}" \
+        "routes:" \
+        "  - from: https://${PROTECTED_HOST}" \
+        "    to: ${UPSTREAM_URL}" \
+        "    allow_any_authenticated_user: true" \
+        "    pass_identity_headers: true" \
+        > /tmp/pomerium-config.yaml
+
+      exec ./pomerium --config /tmp/pomerium-config.yaml

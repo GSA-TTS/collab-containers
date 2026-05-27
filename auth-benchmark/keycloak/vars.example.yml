@@ -1,0 +1,5 @@
+app_name: auth-bench-keycloak
+public_host: auth-bench-keycloak.app.cloud.gov
+rds_service_name: auth-bench-keycloak-db
+bootstrap_admin_username: replace-with-admin-username
+bootstrap_admin_password: replace-with-admin-password

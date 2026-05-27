@@ -27,6 +27,7 @@ applications:
       CMD_PROTOCOL_USESSL: 'true'
       CMD_REQUIRE_FREEURL_AUTHENTICATION: 'true'
       CMD_URL_ADDPORT: 'false'
+      HD_PLANTUML_SERVER: 'https://www.plantuml.com/plantuml'
       PGSSLMODE: 'no-verify'
     volume_mounts:
       - path: /data

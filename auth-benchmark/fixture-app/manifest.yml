@@ -1,0 +1,11 @@
+applications:
+  - name: ((app_name))
+    memory: 64M
+    disk_quota: 512M
+    instances: 1
+    buildpacks:
+      - nodejs_buildpack
+    routes:
+      - route: ((public_host))
+    env:
+      BENCHMARK_NAME: ((benchmark_name))
