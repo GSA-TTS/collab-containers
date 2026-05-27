@@ -13,7 +13,7 @@ Each folder contains a `manifest.yml` file to deploy an ephemeral container on c
 | [openvscode-server](https://github.com/gitpod-io/openvscode-server)  | ✅ Working |                      | [openVScode](./openVScode/) |
 | [Excalidraw](https://github.com/excalidraw/excalidraw)  | ✅ Working |                      | [excalidraw](./excalidraw/) |
 | [HedgeDoc](https://github.com/hedgedoc/hedgedoc)    | ✅ Working |                      | [hedgedoc](./hedgedoc/) |
-| [Outline](https://github.com/outline/outline)     | ✅ Working |                      | [outline](./outline/) |
+| [Outline](https://github.com/outline/outline)     | ❌ Failing | GSA WAF blocks `/api/auth.config` with a 403 (dot-config block rule). | [outline](./outline/) |
 | [Planka](https://github.com/plankanban/planka)      | ✅ Working |                      | [planka](./planka/) |
 | [CryptPad](https://github.com/xwiki-labs/cryptpad)    | ✅ Working |                      | [cryptpad](./cryptpad/) |
 | Auth proxy benchmark | 🧪 Experimental | Cloud.gov UAA benchmark harness and proxy manifests. | [auth-benchmark](./auth-benchmark/) |
