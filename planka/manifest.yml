@@ -27,6 +27,28 @@ applications:
         echo "DATABASE_URL is not set. Bind an aws-rds service before starting Planka."
         exit 1
       fi
+      echo "Applying Planka OIDC Cloud.gov split-domain patch..."
+      node -e '
+        const fs = require("fs");
+        const file = "/app/api/hooks/oidc/index.js";
+        if (fs.existsSync(file)) {
+          let content = fs.readFileSync(file, "utf8");
+          if (!content.includes("login.fr.cloud.gov")) {
+            content = content.replace(
+              "issuer = await openidClient.Issuer.discover(sails.config.custom.oidcIssuer);",
+              `issuer = await openidClient.Issuer.discover(sails.config.custom.oidcIssuer);
+               if (issuer && issuer.metadata && issuer.metadata.authorization_endpoint) {
+                 issuer.metadata.authorization_endpoint = issuer.metadata.authorization_endpoint.replace("uaa.fr.cloud.gov", "login.fr.cloud.gov");
+                 sails.log.info("Patched OIDC authorization endpoint to use login.fr.cloud.gov");
+               }`
+            );
+            fs.writeFileSync(file, content);
+            console.log("Successfully patched Planka OIDC hook for Cloud.gov split-domain UAA!");
+          }
+        } else {
+          console.log("OIDC hook file not found!");
+        }
+      '
       export PGSSLMODE=no-verify
       export KNEX_REJECT_UNAUTHORIZED_SSL_CERTIFICATE=false
       if [ -z "$OIDC_CLIENT_ID" ] && [ -n "$VCAP_SERVICES" ]; then
