@@ -45,7 +45,7 @@ applications:
         exit 1
       fi
 
-      ISSUER_URL="https://uaa.fr.cloud.gov/oauth/token"
+      ISSUER_URL="https://login.fr.cloud.gov/oauth/token"
 
       printf '%s\n' \
         "address: :${PORT}" \
