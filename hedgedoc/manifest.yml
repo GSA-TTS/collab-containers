@@ -8,44 +8,57 @@ applications:
     routes:
       - route: hedgedoc.app.cloud.gov
     env:
-      CMD_ALLOW_ORIGIN: '*'
-      CMD_ALLOW_ANONYMOUS: 'false'
-      CMD_DB_DIALECT: 'postgres'
-      CMD_DOMAIN: 'hedgedoc.app.cloud.gov'
-      CMD_EMAIL: 'false'
-      CMD_LOGLEVEL: 'debug'
-      CMD_OAUTH2_AUTHORIZATION_URL: 'https://login.fr.cloud.gov/oauth/authorize'
-      CMD_OAUTH2_PROVIDERNAME: 'cloud.gov'
-      CMD_OAUTH2_SCOPE: 'openid'
-      CMD_OAUTH2_TOKEN_URL: 'https://uaa.fr.cloud.gov/oauth/token'
-      CMD_OAUTH2_USER_PROFILE_DISPLAY_NAME_ATTR: 'user_name'
-      CMD_OAUTH2_USER_PROFILE_EMAIL_ATTR: 'email'
-      CMD_OAUTH2_USER_PROFILE_ID_ATTR: 'user_id'
-      CMD_OAUTH2_USER_PROFILE_URL: 'https://uaa.fr.cloud.gov/userinfo'
-      CMD_OAUTH2_USER_PROFILE_USERNAME_ATTR: 'user_name'
-      CMD_PORT: '3000'
-      CMD_PROTOCOL_USESSL: 'true'
-      CMD_REQUIRE_FREEURL_AUTHENTICATION: 'true'
-      CMD_URL_ADDPORT: 'false'
-      HD_PLANTUML_SERVER: 'https://www.plantuml.com/plantuml'
-      PGSSLMODE: 'no-verify'
+      CMD_ALLOW_ORIGIN: "*"
+      CMD_ALLOW_ANONYMOUS: "false"
+      CMD_DB_DIALECT: "postgres"
+      CMD_DOMAIN: "hedgedoc.app.cloud.gov"
+      CMD_EMAIL: "false"
+      CMD_LOGLEVEL: "debug"
+      CMD_OAUTH2_AUTHORIZATION_URL: "https://login.fr.cloud.gov/oauth/authorize"
+      CMD_OAUTH2_PROVIDERNAME: "cloud.gov"
+      CMD_OAUTH2_SCOPE: "openid"
+      CMD_OAUTH2_TOKEN_URL: "https://uaa.fr.cloud.gov/oauth/token"
+      CMD_OAUTH2_USER_PROFILE_DISPLAY_NAME_ATTR: "user_name"
+      CMD_OAUTH2_USER_PROFILE_EMAIL_ATTR: "email"
+      CMD_OAUTH2_USER_PROFILE_ID_ATTR: "user_id"
+      CMD_OAUTH2_USER_PROFILE_URL: "https://uaa.fr.cloud.gov/userinfo"
+      CMD_OAUTH2_USER_PROFILE_USERNAME_ATTR: "user_name"
+      CMD_PORT: "3000"
+      CMD_PROTOCOL_USESSL: "true"
+      CMD_REQUIRE_FREEURL_AUTHENTICATION: "true"
+      CMD_URL_ADDPORT: "false"
+      HD_PLANTUML_SERVER: "https://www.plantuml.com/plantuml"
+      PGSSLMODE: "no-verify"
     volume_mounts:
       - path: /data
         volume: hedgedoc-data
     services:
       - hedgedoc-db
     command: |
-       export NODE_ENV=production
-       export CMD_CONFIG_FILE=/tmp/hedgedoc-config.json
-       printf '{"production":{}}\n' > "$CMD_CONFIG_FILE"
-       if [ -z "$DATABASE_URL" ] && [ -n "$VCAP_SERVICES" ]; then
-         export DATABASE_URL=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.uri || "");')
-       fi
-       if [ -z "$DATABASE_URL" ]; then
-         echo "DATABASE_URL is not set. Bind an aws-rds service before starting HedgeDoc."
-         exit 1
-       fi
-       export CMD_DB_URL=$(node -e 'const raw = process.env.DATABASE_URL; const url = new URL(raw); url.searchParams.set("sslmode", "no-verify"); url.searchParams.set("ssl", "true"); process.stdout.write(url.toString());')
-       export CMD_PORT="${PORT:-3000}"
-       echo "Starting HedgeDoc with bound Postgres service and cloud.gov route ${CMD_DOMAIN}."
-       exec node app.js
+      export NODE_ENV=production
+      export CMD_CONFIG_FILE=/tmp/hedgedoc-config.json
+      if [ -z "$DATABASE_URL" ] && [ -n "$VCAP_SERVICES" ]; then
+        export DATABASE_URL=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.uri || "");')
+      fi
+      if [ -z "$DATABASE_URL" ]; then
+        echo "DATABASE_URL is not set. Bind an aws-rds service before starting HedgeDoc."
+        exit 1
+      fi
+      export CMD_SESSION_SECRET="${CMD_SESSION_SECRET:-$(node -e 'console.log(require("crypto").randomBytes(32).toString("base64"))')}"
+      node -e '
+        const config = {
+          production: {
+            dbURL: process.env.DATABASE_URL,
+            dialectOptions: {
+              ssl: {
+                require: true,
+                rejectUnauthorized: false
+              }
+            }
+          }
+        };
+        require("fs").writeFileSync(process.env.CMD_CONFIG_FILE, JSON.stringify(config));
+      '
+      export CMD_PORT="${PORT:-3000}"
+      echo "Starting HedgeDoc with bound Postgres service and cloud.gov route ${CMD_DOMAIN}."
+      exec node app.js

@@ -12,10 +12,10 @@ Each folder contains a `manifest.yml` file to deploy an ephemeral container on c
 | [Marimo](https://github.com/marimo-team/marimo)      | ✅ Working |                      | [marimo](./marimo/) |
 | [openvscode-server](https://github.com/gitpod-io/openvscode-server)  | ✅ Working |                      | [openVScode](./openVScode/) |
 | [Excalidraw](https://github.com/excalidraw/excalidraw)  | ✅ Working |                      | [excalidraw](./excalidraw/) |
-| [HedgeDoc](https://github.com/hedgedoc/hedgedoc)    | ❌ Failing | DB connection issues, check `CMD_DB_URL` and database service binding. | [hedgedoc](./hedgedoc/) |
-| [Outline](https://github.com/outline/outline)     | ❌ Failing | Missing/invalid secrets or AWS config in environment variables. | [outline](./outline/) |
-| [Planka](https://github.com/plankanban/planka)      | ❌ Failing | Database not reachable or `DATABASE_URL` misconfigured. | [planka](./planka/) |
-| [CryptPad](https://github.com/xwiki-labs/cryptpad)    | ❌ Failing | `config.js` not found at `/cryptpad/config/config.js` or ENV var issues. | [cryptpad](./cryptpad/) |
+| [HedgeDoc](https://github.com/hedgedoc/hedgedoc)    | ✅ Working |                      | [hedgedoc](./hedgedoc/) |
+| [Outline](https://github.com/outline/outline)     | ✅ Working |                      | [outline](./outline/) |
+| [Planka](https://github.com/plankanban/planka)      | ✅ Working |                      | [planka](./planka/) |
+| [CryptPad](https://github.com/xwiki-labs/cryptpad)    | ✅ Working |                      | [cryptpad](./cryptpad/) |
 | Auth proxy benchmark | 🧪 Experimental | Cloud.gov UAA benchmark harness and proxy manifests. | [auth-benchmark](./auth-benchmark/) |
 
 ## Others?

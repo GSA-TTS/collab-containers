@@ -1,40 +1,50 @@
 ---
 applications:
-- name: cryptpad-app
-  memory: 2G
-  disk_quota: 2G
-  instances: 1
-  docker:
-    image: cryptpad/cryptpad:version-2025.6.0
-  routes:
-  - route: cryptpad.app.cloud.gov
-  env:
-    # Basic configuration
-    NODE_ENV: production
-    ADMIN_KEY: ${RANDOM_SECRET_KEY}
-    STORAGE_LIMIT: 1800000000 # 1GB in bytes
-    BASE_URL: https://cryptpad.app.cloud.gov
-    TRUST_PROXY: "true"
-  volume_mounts:
-  - path: /cryptpad/blob
-    volume: cryptpad-blob
-  - path: /cryptpad/block
-    volume: cryptpad-block
-  - path: /cryptpad/customize
-    volume: cryptpad-customize
-  - path: /cryptpad/data
-    volume: cryptpad-data
-  - path: /cryptpad/datastore
-    volume: cryptpad-datastore
-  - path: /cryptpad/www/common/onlyoffice/dist
-    volume: cryptpad-onlyoffice-dist
-  - path: /cryptpad/onlyoffice-conf
-    volume: cryptpad-onlyoffice-conf
-  - path: /cryptpad/config/config.js
-    volume: cryptpad-config
-  command: >
-    sh -c "if [ ! -f /cryptpad/config/config.js ]; then
-      echo 'Error: config.js file not found at /cryptpad/config/config.js';
-      exit 1;
-    fi;
-    exec npm start"
+  - name: cryptpad-app
+    memory: 512M
+    disk_quota: 1G
+    instances: 1
+    docker:
+      image: cryptpad/cryptpad:version-2025.6.0
+    routes:
+      - route: cryptpad.app.cloud.gov
+    env:
+      # Basic configuration
+      NODE_ENV: production
+      ADMIN_KEY: ${RANDOM_SECRET_KEY}
+      STORAGE_LIMIT: 1800000000 # 1GB in bytes
+      BASE_URL: https://cryptpad.app.cloud.gov
+      TRUST_PROXY: "true"
+    volume_mounts:
+      - path: /cryptpad/blob
+        volume: cryptpad-blob
+      - path: /cryptpad/block
+        volume: cryptpad-block
+      - path: /cryptpad/customize
+        volume: cryptpad-customize
+      - path: /cryptpad/data
+        volume: cryptpad-data
+      - path: /cryptpad/datastore
+        volume: cryptpad-datastore
+    command: |
+      node -e '
+        const fs = require("fs");
+        const wrapper = `
+          const config = require("./config.example.js");
+          config.httpPort = process.env.PORT || 3000;
+        config.httpAddress = "0.0.0.0";
+          if (process.env.BASE_URL) {
+            config.mainURL = process.env.BASE_URL + (process.env.BASE_URL.endsWith("/") ? "" : "/");
+          }
+          if (process.env.ADMIN_KEY && process.env.ADMIN_KEY !== "\${RANDOM_SECRET_KEY}") {
+            config.adminKeys = [ process.env.ADMIN_KEY ];
+          }
+          if (process.env.STORAGE_LIMIT) {
+            config.storageLimit = parseInt(process.env.STORAGE_LIMIT, 10);
+          }
+          module.exports = config;
+        `;
+        fs.writeFileSync("/cryptpad/config/config.js", wrapper);
+      '
+      echo "Starting CryptPad with wrapped dynamic configuration..."
+      exec npm start
