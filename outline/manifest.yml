@@ -15,6 +15,12 @@ applications:
       ENABLE_UPDATES: "false"
       FILE_STORAGE: local
       FILE_STORAGE_LOCAL_DIR: /data
+      OIDC_DISPLAY_NAME: "cloud.gov"
+      OIDC_AUTH_URI: "https://login.fr.cloud.gov/oauth/authorize"
+      OIDC_TOKEN_URI: "https://uaa.fr.cloud.gov/oauth/token"
+      OIDC_USERINFO_URI: "https://uaa.fr.cloud.gov/userinfo"
+      OIDC_USERNAME_FIELD: "user_name"
+      OIDC_SCOPES: "openid profile email"
     services:
       - outline-db
       - outline-redis
@@ -35,6 +41,12 @@ applications:
       if [ -z "$REDIS_URL" ]; then
         echo "REDIS_URL is not set. Bind an aws-elasticache-redis service before starting Outline."
         exit 1
+      fi
+      if [ -z "$OIDC_CLIENT_ID" ] && [ -n "$VCAP_SERVICES" ]; then
+        export OIDC_CLIENT_ID=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["cloud-gov-identity-provider"] || []).find(s => s.name === "outline-uaa") || {}).credentials || {}; process.stdout.write(creds.client_id || "");')
+      fi
+      if [ -z "$OIDC_CLIENT_SECRET" ] && [ -n "$VCAP_SERVICES" ]; then
+        export OIDC_CLIENT_SECRET=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["cloud-gov-identity-provider"] || []).find(s => s.name === "outline-uaa") || {}).credentials || {}; process.stdout.write(creds.client_secret || "");')
       fi
       export PGSSLMODE=require
       export DATABASE_REJECT_UNAUTHORIZED=false
