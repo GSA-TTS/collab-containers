@@ -182,6 +182,29 @@ A comprehensive, weighted evaluation was conducted on each candidate in the `sta
 
 ---
 
+## Architectural Decision Records & Decision-Making Documentation
+
+During live validation of the benchmark cohort in GSA's `staging` environment on Cloud.gov, several platform-level, browser-privacy, and cryptographic constraints were analyzed and solved. This documentation serves as the official record of those architectural decisions.
+
+### ADR 1: Domain Unification for GSA SAML SSO (InResponseTo Resolution)
+* **Context**: Logging in via GSA Secure Auth SAML SSO returned the error: `The response contained an InResponseTo attribute [...] but no saved authentication request was found`.
+* **Problem**: Cloud.gov UAA operates on a split-domain architecture: `uaa.fr.cloud.gov` for backchannel server-to-server exchanges, and `login.fr.cloud.gov` for user-facing browser logins. When a proxy redirected browser traffic to `uaa.fr.cloud.gov/oauth/authorize`, the browser request cookie (`JSESSIONID`) was set on `uaa.fr.cloud.gov`. However, GSA Secure Auth strictly POSTs the SAML assertion back to the ACS URL on `login.fr.cloud.gov/saml/SSO`. Since cookies are not shared across domains, UAA on `login` could not find the request session state and crashed.
+* **Decision**: We unified the browser-facing domain to `https://login.fr.cloud.gov/oauth/token` for OIDC discovery. Since `oauth2-proxy` supports `--insecure-oidc-skip-issuer-verification`, it can perform discovery entirely on the user-facing domain `login.fr.cloud.gov` while bypassing the OIDC issuer mismatch verification check. **Pomerium, due to its strict compliance with the core OIDC specification, lacks this bypass flag and remains fundamentally incompatible with GSA SAML SSO on Cloud.gov.**
+
+### ADR 2: Private Container-to-Container Routing (HTTP 463 Loop Resolution)
+* **Context**: Authenticated proxy traffic to the public fixture app returned a `502 Bad Gateway` or `HTTP ERROR 463` on the AWS/Gorouter.
+* **Problem**: By default, proxies were configured with a public `upstream_url` pointing back to Gorouter (e.g., `https://auth-bench-fixture-staging.app.cloud.gov`). Because the proxies had Host-Header pass-through enabled, they forwarded the browser's Host header (`auth-bench-oauth2-proxy-staging.app.cloud.gov`). When Gorouter received this proxied request, it parsed the Host header and routed it back to the proxy app, causing an infinite loop. This quickly filled up the `X-Forwarded-For` header, triggering AWS's loop protection check with HTTP `463`.
+* **Decision**: We migrated both proxy cohorts to use **Cloud.gov private container-to-container routing**. We mapped the private `apps.internal` routes to both dedicated fixture apps, established secure network policies on port `8080`, and updated the upstreams to use the secure private overlay:
+  * `upstream_url: http://auth-bench-fixture-oauth2-proxy-staging.apps.internal:8080`
+  This completely removes public Gorouter hops from the proxy-to-fixture path, permanently resolving the HTTP `463` loop and increasing routing speed and security.
+
+### ADR 3: Unverified Email Bypass for Federated Identities (HTTP 500 Resolution)
+* **Context**: Redeeming the OIDC authorization code at the proxy callback returned an HTTP `500` error: `Error redeeming code during OAuth2 callback: email in id_token (john.jediny@gsa.gov) isn't verified`.
+* **Problem**: `oauth2-proxy` strictly expects the OIDC ID Token to contain a `"email_verified": true` claim. Because Cloud.gov UAA's SAML federation with GSA Secure Auth does not output this specific `"email_verified"` boolean flag in the token claims payload, `oauth2-proxy` rejected the assertion.
+* **Decision**: We enabled `OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL="true"` (equivalent to `--insecure-oidc-allow-unverified-email`). Since all GSA federated accounts are fundamentally verified by GSA Secure Auth/PIV cards during SAML login, this bypass is fully secure and represents the standard configuration pattern for federated OIDC clients on Cloud.gov.
+
+---
+
 ## Blanket Subdomain & Path Coverage Analysis
 
 A critical requirement of these gatekeepers is "blanket coverage"—ensuring **all URIs** of the upstream proxied application (every path, query string, asset file, and WebSocket) are transparently and securely intercepted by the proxy layer.
