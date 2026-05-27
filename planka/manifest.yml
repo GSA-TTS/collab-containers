@@ -25,7 +25,11 @@ applications:
         exit 1
       fi
       export PGSSLMODE=no-verify
+      export KNEX_REJECT_UNAUTHORIZED_SSL_CERTIFICATE=false
       export SECRET_KEY="${SECRET_KEY:-$(node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')}"
+      echo "Running Planka database migrations..."
+      node /app/node_modules/knex/bin/cli.js migrate:latest --cwd /app/db
+      node /app/db/init.js
       echo "Starting Planka..."
       if [ -f /app/docker-entrypoint.sh ]; then
         exec /app/docker-entrypoint.sh node app.js
