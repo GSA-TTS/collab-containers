@@ -20,25 +20,23 @@ The benchmark is split into three cohorts:
 
 ```mermaid
 graph TD
-    User([User Browser]) :::accent0 -->|1. Public Route| Router[Cloud.gov Gorouter] :::accent2
+    User([User Browser]) -->|1. Public Route| Router[Cloud.gov Gorouter]
     
     subgraph Proxy Cohorts
-        Router -->|oauth2-proxy-staging.app.cloud.gov| OAuthProxy[oauth2-proxy App] :::accent1
-        Router -->|pomerium-staging.app.cloud.gov| Pomerium[Pomerium App] :::accent1
+        Router -->|oauth2-proxy-staging.app.cloud.gov| OAuthProxy[oauth2-proxy App]
+        Router -->|pomerium-staging.app.cloud.gov| Pomerium[Pomerium App]
     end
     
     subgraph Isolated Upstreams
-        OAuthProxy -->|Pass Host: false| FixtureOAuth[Dedicated Fixture App For OAuth] :::accent3
-        Pomerium -->|Direct Forward| FixturePom[Dedicated Fixture App For Pomerium] :::accent3
+        OAuthProxy -->|Pass Host: false| FixtureOAuth[Dedicated Fixture App For OAuth]
+        Pomerium -->|Direct Forward| FixturePom[Dedicated Fixture App For Pomerium]
     end
     
     subgraph Identity Brokerage
-        OAuthProxy -.->|OIDC Discovery & Callback| UAA[login.fr.cloud.gov] :::accent4
+        OAuthProxy -.->|OIDC Discovery & Callback| UAA[login.fr.cloud.gov]
         Pomerium -.->|OIDC Discovery & Callback| UAA
-        UAA <-->|SAML Federation| SecureAuth[GSA Secure Auth / PIV] :::accent5
+        UAA <-->|SAML Federation| SecureAuth[GSA Secure Auth / PIV]
     end
-
-    classDef default fill:#333,stroke:#fff,stroke-width:1px;
 ```
 
 ### SAML / OIDC Single Sign-On Flow (Domain Unification)
