@@ -21,6 +21,12 @@ applications:
       OIDC_USERINFO_URI: "https://uaa.fr.cloud.gov/userinfo"
       OIDC_USERNAME_FIELD: "user_name"
       OIDC_SCOPES: "openid profile email"
+      AWS_ACCESS_KEY_ID: "placeholder"
+      AWS_SECRET_ACCESS_KEY: "placeholder"
+      AWS_REGION: "us-east-1"
+      AWS_S3_UPLOAD_BUCKET_URL: "https://placeholder-bucket.s3.amazonaws.com"
+      AWS_S3_UPLOAD_BUCKET_NAME: "placeholder-bucket"
+      AWS_S3_UPLOAD_MAX_SIZE: "26214400"
     services:
       - outline-db
       - outline-redis
