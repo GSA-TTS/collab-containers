@@ -42,6 +42,7 @@ applications:
       export OAUTH2_PROXY_CLIENT_SECRET="$CLIENT_SECRET"
       export OAUTH2_PROXY_OIDC_ISSUER_URL="https://login.fr.cloud.gov/oauth/token"
       export OAUTH2_PROXY_INSECURE_OIDC_SKIP_ISSUER_VERIFICATION="true"
+      export OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL="true"
       export OAUTH2_PROXY_HTTP_ADDRESS="0.0.0.0:${PORT}"
       export OAUTH2_PROXY_REDIRECT_URL="https://${PROTECTED_HOST}/oauth2/callback"
       export OAUTH2_PROXY_UPSTREAMS="${UPSTREAM_URL}"
