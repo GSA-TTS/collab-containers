@@ -32,9 +32,10 @@ applications:
         const wrapper = `
           const config = require("./config.example.js");
           config.httpPort = process.env.PORT || 3000;
-        config.httpAddress = "0.0.0.0";
+          config.httpAddress = "0.0.0.0";
           if (process.env.BASE_URL) {
-            config.mainURL = process.env.BASE_URL + (process.env.BASE_URL.endsWith("/") ? "" : "/");
+            config.httpUnsafeOrigin = process.env.BASE_URL;
+            config.httpSafeOrigin = process.env.BASE_URL;
           }
           if (process.env.ADMIN_KEY && process.env.ADMIN_KEY !== "\${RANDOM_SECRET_KEY}") {
             config.adminKeys = [ process.env.ADMIN_KEY ];
