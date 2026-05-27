@@ -11,6 +11,9 @@ applications:
     env:
       # Basic configuration
       BASE_URL: https://planka.app.cloud.gov
+      OIDC_ISSUER: https://uaa.fr.cloud.gov/oauth/token
+      OIDC_USERNAME_ATTRIBUTE: user_name
+      OIDC_NAME_ATTRIBUTE: user_name
     services:
       - planka-db
     volume_mounts:
@@ -26,6 +29,12 @@ applications:
       fi
       export PGSSLMODE=no-verify
       export KNEX_REJECT_UNAUTHORIZED_SSL_CERTIFICATE=false
+      if [ -z "$OIDC_CLIENT_ID" ] && [ -n "$VCAP_SERVICES" ]; then
+        export OIDC_CLIENT_ID=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["cloud-gov-identity-provider"] || []).find(s => s.name === "planka-uaa") || {}).credentials || {}; process.stdout.write(creds.client_id || "");')
+      fi
+      if [ -z "$OIDC_CLIENT_SECRET" ] && [ -n "$VCAP_SERVICES" ]; then
+        export OIDC_CLIENT_SECRET=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["cloud-gov-identity-provider"] || []).find(s => s.name === "planka-uaa") || {}).credentials || {}; process.stdout.write(creds.client_secret || "");')
+      fi
       export SECRET_KEY="${SECRET_KEY:-$(node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')}"
       echo "Running Planka database migrations..."
       node /app/node_modules/knex/bin/cli.js migrate:latest --cwd /app/db
