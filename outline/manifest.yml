@@ -1,31 +1,44 @@
 ---
 applications:
-- name: outline-app
-  memory: 2G
-  disk_quota: 2G
-  instances: 1
-  docker:
-    image: outlinewiki/outline:latest
-  routes:
-  - route: outline.app.cloud.gov
-  env:
-    # Basic configuration
-    DATABASE_URL: postgres://outline_user:outline_password@db-host:5432/outline
-    REDIS_URL: redis://redis-host:6379
-    SECRET_KEY: your-secret-key
-    UTILS_SECRET: your-utils-secret
-    URL: https://outline.app.cloud.gov
-    PORT: 3000
-    FORCE_HTTPS: "true"
-    ENABLE_UPDATES: "false"
-    SLACK_KEY: your-slack-key
-    SLACK_SECRET: your-slack-secret
-    AWS_ACCESS_KEY_ID: your-aws-access-key
-    AWS_SECRET_ACCESS_KEY: your-aws-secret-key
-    AWS_REGION: us-east-1
-    AWS_S3_UPLOAD_BUCKET_URL: https://your-s3-bucket.s3.amazonaws.com
-    AWS_S3_UPLOAD_BUCKET_NAME: your-s3-bucket
-    AWS_S3_UPLOAD_MAX_SIZE: 26214400
-  volume_mounts:
-  - path: /data
-    volume: outline-data
+  - name: outline-app
+    memory: 768M
+    disk_quota: 1G
+    instances: 1
+    docker:
+      image: outlinewiki/outline:latest
+    routes:
+      - route: outline.app.cloud.gov
+    env:
+      # Basic configuration
+      URL: https://outline.app.cloud.gov
+      FORCE_HTTPS: "true"
+      ENABLE_UPDATES: "false"
+      FILE_STORAGE: local
+      FILE_STORAGE_LOCAL_DIR: /data
+    services:
+      - outline-db
+      - outline-redis
+    volume_mounts:
+      - path: /data
+        volume: outline-data
+    command: |
+      if [ -z "$DATABASE_URL" ] && [ -n "$VCAP_SERVICES" ]; then
+        export DATABASE_URL=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.uri || "");')
+      fi
+      if [ -z "$DATABASE_URL" ]; then
+        echo "DATABASE_URL is not set. Bind an aws-rds service before starting Outline."
+        exit 1
+      fi
+      if [ -z "$REDIS_URL" ] && [ -n "$VCAP_SERVICES" ]; then
+        export REDIS_URL=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-elasticache-redis"] || services["redis"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.uri || "");')
+      fi
+      if [ -z "$REDIS_URL" ]; then
+        echo "REDIS_URL is not set. Bind an aws-elasticache-redis service before starting Outline."
+        exit 1
+      fi
+      export PGSSLMODE=require
+      export DATABASE_REJECT_UNAUTHORIZED=false
+      export SECRET_KEY="${SECRET_KEY:-$(node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')}"
+      export UTILS_SECRET="${UTILS_SECRET:-$(node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')}"
+      echo "Starting Outline..."
+      exec node build/server/index.js
