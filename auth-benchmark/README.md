@@ -20,25 +20,23 @@ The benchmark is split into three cohorts:
 
 ```mermaid
 graph TD
-    User([User Browser]) :::accent0 -->|1. Public Route| Router[Cloud.gov Gorouter] :::accent2
+    User([User Browser]) -->|1. Public Route| Router[Cloud.gov Gorouter]
     
     subgraph Proxy Cohorts
-        Router -->|oauth2-proxy-staging.app.cloud.gov| OAuthProxy[oauth2-proxy App] :::accent1
-        Router -->|pomerium-staging.app.cloud.gov| Pomerium[Pomerium App] :::accent1
+        Router -->|oauth2-proxy-staging.app.cloud.gov| OAuthProxy[oauth2-proxy App]
+        Router -->|pomerium-staging.app.cloud.gov| Pomerium[Pomerium App]
     end
     
     subgraph Isolated Upstreams
-        OAuthProxy -->|Pass Host: false| FixtureOAuth[Dedicated Fixture App For OAuth] :::accent3
-        Pomerium -->|Direct Forward| FixturePom[Dedicated Fixture App For Pomerium] :::accent3
+        OAuthProxy -->|Pass Host: false| FixtureOAuth[Dedicated Fixture App For OAuth]
+        Pomerium -->|Direct Forward| FixturePom[Dedicated Fixture App For Pomerium]
     end
     
     subgraph Identity Brokerage
-        OAuthProxy -.->|OIDC Discovery & Callback| UAA[login.fr.cloud.gov] :::accent4
+        OAuthProxy -.->|OIDC Discovery & Callback| UAA[login.fr.cloud.gov]
         Pomerium -.->|OIDC Discovery & Callback| UAA
-        UAA <-->|SAML Federation| SecureAuth[GSA Secure Auth / PIV] :::accent5
+        UAA <-->|SAML Federation| SecureAuth[GSA Secure Auth / PIV]
     end
-
-    classDef default fill:#333,stroke:#fff,stroke-width:1px;
 ```
 
 ### SAML / OIDC Single Sign-On Flow (Domain Unification)
@@ -254,3 +252,31 @@ Both proxies perfectly handle **blanket path and query coverage** (including ass
 - The current org and space already expose `cloud-gov-identity-provider`, `aws-rds`, and `aws-elasticache-redis` in the marketplace.
 - The deployable manifests here assume TLS is terminated at Cloud Foundry and the proxy listens on the platform-provided `PORT`.
 - Each candidate gets its own UAA service instance because the redirect URI is candidate-specific.
+
+---
+
+## Final Decision & Why Alternatives are Not Recommended
+
+Based on live, end-to-end benchmarking in GSA's staging space on Cloud.gov, the official final decision is to **adopt `oauth2-proxy`** to secure collaboration containers in this repository. 
+
+Here are the definitive engineering reasons why the alternative candidates are **not recommended**:
+
+### 1. Pomerium (Disqualified due to Split-Domain SAML Incompatibility)
+* **The Blocker**: Pomerium's OIDC implementation strictly complies with core specifications, mandating that the OIDC `"iss"` claim inside the returned JWT token must match the OIDC discovery domain exactly.
+* **Why it fails on Cloud.gov**: Cloud.gov UAA operates on a split-domain layout (`uaa.fr.cloud.gov` for backchannel token exchanges and `login.fr.cloud.gov` for browser authentication). Because Pomerium cannot skip issuer verification, we cannot unify the browser redirections to `login.fr.cloud.gov`. This forces browser-facing requests to `uaa.fr.cloud.gov`, where they are rejected by UAA with SAML cookie mismatch errors (`InResponseTo... no saved authentication request was found`) upon GSA Secure Auth postback.
+* **Verdict**: Fundamentally incompatible with GSA SAML SSO on Cloud.gov.
+
+### 2. Keycloak (Not Recommended due to Resource Footprint & Operability)
+* **The Blocker**: Keycloak is an identity provider/broker, not a thin stateless reverse-proxy. Securing downstream apps requires integrating Keycloak adapter libraries directly into container source code, which goes against our "sidecar/wrapper" deployment model.
+* **Why it fails our criteria**: Keycloak has an extremely heavy footprint. Running a single instance requires a minimum of **~1 GB to 2 GB of RAM** (running on JRE) and has a prolonged startup/warmup curve. Furthermore, it requires a stateful RDS database instance (Postgres/MySQL) to be provisioned and managed on Cloud.gov, massively increasing operational costs, maintenance overhead, and blast radius.
+* **Verdict**: Disqualified due to unnecessary complexity, stateful database dependencies, and excessive resource consumption.
+
+### 3. Authentik (Not Recommended due to Complex Stack & Manual Bootstrap)
+* **The Blocker**: Authentik is an all-in-one identity platform. Running it requires deploying a complex, multi-service stack (core server, background workers, Redis cache, and Postgres database) which is extremely fragile to orchestrate inside Cloud Foundry's single-container app model.
+* **Why it fails our criteria**: Authentik relies on outposts to perform proxying. Deploying and maintaining this architecture on Cloud.gov requires a high-overhead manual bootstrap process—specifically, logging into a web admin console post-deployment to manually declare OIDC sources and generate outpost keys. This breaks our requirement for fully automated, stateless "one-click" manifest deployments.
+* **Verdict**: Disqualified due to heavy multi-service infrastructure requirements and lack of automated deployment capabilities.
+
+### 4. Authelia (Disqualified due to Companion Proxy Dependency)
+* **The Blocker**: Authelia is designed solely as an authentication portal/backend. It lacks native reverse-proxy capabilities.
+* **Why it fails our criteria**: Authelia must be deployed in tandem with a companion reverse-proxy (like Nginx, Traefik, or HAProxy) that supports forward-authentication modules (`auth_request`). Securing an app with Authelia on Cloud.gov requires managing a dual-container deployment (Nginx proxy + Authelia portal) per collaboration app, doubling platform memory usage and configuration complexity.
+* **Verdict**: Disqualified due to architectural mismatch and high multi-container configuration overhead.
