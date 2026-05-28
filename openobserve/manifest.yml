@@ -1,23 +1,28 @@
 ---
+# OpenObserve backend application (internal only, no public route)
+# Access is gated by oauth2-proxy via container-to-container networking
 applications:
-- name: openobserve
+- name: ((app_name))
   memory: 2G
   disk_quota: 2G
   instances: 1
-  path: .
   buildpacks:
-  - binary_buildpack
-  #stack: cflinuxfs3
+    - binary_buildpack
   routes:
-  - route: openobserve.app.cloud.gov
+    # Internal route only - not publicly accessible
+    - route: ((internal_host))
   env:
-    # Download OpenObserve binary from latest GitHub release
-    BP_BINARY_URI: "https://github.com/openobserve/openobserve/releases/latest/download/openobserve-linux-amd64.tar.gz"
     # Root user credentials for OpenObserve
-    ZO_ROOT_USER_EMAIL: "root@example.com"
-    ZO_ROOT_USER_PASSWORD: "Complexpass#123"
-  volume_mounts:
-  - path: /data
-    volume: openobserve-data
+    ZO_ROOT_USER_EMAIL: ((zo_root_email))
+    ZO_ROOT_USER_PASSWORD: ((zo_root_password))
+    # Data directory
+    ZO_DATA_DIR: /home/vcap/app/data
+    # Listen on Cloud Foundry provided port
+    ZO_HTTP_PORT: "8080"
+    ZO_HTTP_ADDR: "0.0.0.0"
   command: |
-    openobserve --http-host 0.0.0.0 --http-port 3000
+    mkdir -p /home/vcap/app/data
+    curl -L -o openobserve.tar.gz https://downloads.openobserve.ai/releases/o2-enterprise/v0.90.3/openobserve-ee-v0.90.3-linux-amd64-musl.tar.gz
+    tar -xzf openobserve.tar.gz
+    chmod +x openobserve
+    ./openobserve
