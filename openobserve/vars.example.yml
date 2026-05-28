@@ -1,0 +1,33 @@
+# OpenObserve with oauth2-proxy deployment variables
+# Copy this file to vars.yml and fill in the values
+
+# Application naming
+# Use -staging suffix for staging deployments
+app_name: openobserve-staging
+proxy_name: openobserve-proxy-staging
+
+# Routes
+# IMPORTANT: cookie_domain MUST match protected_host exactly
+protected_host: openobserve-staging.app.cloud.gov
+internal_host: openobserve-staging.apps.internal
+
+# UAA service (created via cf create-service cloud-gov-identity-provider)
+uaa_service_name: openobserve-uaa
+
+# oauth2-proxy cookie secret (32-byte base64-encoded)
+# Generate with: openssl rand -base64 32
+cookie_secret: replace-with-32-byte-base64-secret
+
+# Cookie and whitelist domains
+# IMPORTANT: cookie_domain MUST match protected_host exactly
+cookie_domain: openobserve-staging.app.cloud.gov
+whitelist_domain: .app.cloud.gov
+
+# UAA scope (openid is standard for authentication)
+uaa_scope: openid
+
+# OpenObserve root credentials
+# These are also used for API Basic Auth access
+# IMPORTANT: Change these before deployment!
+zo_root_email: root@example.com
+zo_root_password: Complexpass#123
