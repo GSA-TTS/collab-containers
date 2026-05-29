@@ -5,7 +5,7 @@ This scaffold benchmarks Cloud.gov UAA-backed auth proxies in front of a generic
 The benchmark is split into three cohorts:
 
 - Direct Cloud.gov UAA clients with deployable scaffolding in this repo: `oauth2-proxy`, `pomerium`
-- Brokered authority candidates deployed on Cloud.gov: `keycloak`
+- Brokered authority candidates deployed on Cloud.gov: `keycloak`, `zitadel`
 - Comparison candidates that need manual bootstrap or do not fit the direct-UAA model: `authentik`, `authelia`
 
 ## What is included
@@ -115,6 +115,16 @@ cd auth-benchmark
 - Runs as the stable OIDC authority on Cloud.gov and brokers external IdPs like Cloud.gov UAA behind it
 - Compare it separately from thin auth-proxy candidates because it centralizes auth before downstream apps ever talk to an IdP
 - See `keycloak/README.md`
+
+### zitadel
+
+- Lightweight Go-based alternative to Keycloak for brokered-identity patterns
+- Native multi-tenancy with Organizations and Projects hierarchy
+- Event-sourced architecture provides complete audit trail
+- Lower memory footprint (~256-512MB vs Keycloak's 1-2GB)
+- Requires multi-container deployment (API + Login UI)
+- AGPL-3.0 license may have implications for government use
+- See `zitadel/README.md`
 
 ### authentik
 

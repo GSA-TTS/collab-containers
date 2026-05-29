@@ -16,6 +16,7 @@ Each folder contains a `manifest.yml` file to deploy an ephemeral container on c
 | [Outline](https://github.com/outline/outline)     | ❌ Failing | 🚫 Required (oauth2-proxy) | GSA WAF blocks `/api/auth.config` with a 403 (dot-config block rule). | [outline](./outline/) |
 | [Planka](https://github.com/plankanban/planka)      | ❌ Failing | 🚫 Required (oauth2-proxy) | Database resolved, but Cloud.gov SAML split-domain session cookie is stripped by browser (SameSite block). | [planka](./planka/) |
 | [CryptPad](https://github.com/xwiki-labs/cryptpad)    | ✅ Working | ✅ Yes (oauth2-proxy) |                      | [cryptpad](./cryptpad/) |
+| [Backstage](https://github.com/backstage/backstage)  | ✅ Working | ✅ Yes (oauth2-proxy) |                      | [backstage](./backstage/) |
 | Auth proxy benchmark | 🧪 Experimental | — | Cloud.gov UAA benchmark harness and proxy manifests. | [auth-benchmark](./auth-benchmark/) |
 
 ## Others?

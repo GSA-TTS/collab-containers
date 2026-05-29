@@ -1,0 +1,66 @@
+app:
+  # The frontend baseUrl. Cloud.gov route is dynamically injected via BACKSTAGE_HOST env var.
+  baseUrl: https://${BACKSTAGE_HOST}
+
+backend:
+  # The backend baseUrl.
+  baseUrl: https://${BACKSTAGE_HOST}
+  listen:
+    port: ${PORT}
+  csp:
+    connect-src: ["'self'", 'https:', 'http:']
+  cors:
+    origin: https://${BACKSTAGE_HOST}
+    methods: [GET, POST, PUT, DELETE]
+    credentials: true
+  database:
+    client: pg
+    connection:
+      host: ${POSTGRES_HOST}
+      port: ${POSTGRES_PORT}
+      user: ${POSTGRES_USER}
+      password: ${POSTGRES_PASSWORD}
+      database: ${POSTGRES_DB}
+      ssl:
+        rejectUnauthorized: false # Required for cloud.gov AWS RDS instances
+    # Ensure tables are created automatically
+    ensureExists: true
+
+# Auth configurations supporting both OIDC (Direct Login.gov/Cloud.gov) and oauth2-proxy (Proxy Mode)
+auth:
+  environment: production
+  providers:
+    # -----------------------------------------------------------------
+    # SCENARIO A: oauth2-proxy / Gateway-level Authentication
+    # -----------------------------------------------------------------
+    # Backstage trustfully accepts the identity injected into HTTP headers
+    # by the front-door oauth2-proxy (running as a sidecar or standalone gateway).
+    # Configure the oauth2Proxy provider to parse standard headers like:
+    # X-Forwarded-User, X-Forwarded-Email, X-Forwarded-Preferred-Username
+    oauth2Proxy:
+      signIn:
+        resolvers:
+          - resolver: emailMatchingUserEntityProfileEmail
+          - resolver: usernameMatchingUserEntityName
+
+    # -----------------------------------------------------------------
+    # SCENARIO B: Direct OIDC (Login.gov or Cloud.gov UAA)
+    # -----------------------------------------------------------------
+    # Configure backstage to perform a direct standard OIDC authorization code flow.
+    oidc:
+      production:
+        clientId: ${OIDC_CLIENT_ID}
+        clientSecret: ${OIDC_CLIENT_SECRET}
+        metadataUrl: ${OIDC_METADATA_URL}
+        prompt: auto
+        signIn:
+          resolvers:
+            - resolver: emailMatchingUserEntityProfileEmail
+            - resolver: usernameMatchingUserEntityName
+
+# Production Catalog configuration
+catalog:
+  import:
+    entityFilename: catalog-info.yaml
+  rules:
+    - allow: [Component, System, API, Resource, Location]
