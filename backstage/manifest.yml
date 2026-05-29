@@ -1,0 +1,91 @@
+---
+applications:
+  # ==========================================================================
+  # Backstage Backend Application (Internal Route Only)
+  # ==========================================================================
+  # This app is NOT directly accessible from the internet.
+  # Traffic flows through oauth2-proxy which handles authentication.
+  - name: ((app_name))
+    memory: 1G
+    disk_quota: 2G
+    instances: 1
+
+    # Use official Backstage image
+    docker:
+      image: ghcr.io/backstage/backstage:1.51.0
+
+    # Internal route only - oauth2-proxy forwards traffic here
+    routes:
+      - route: ((internal_host))
+
+    # Bind the PostgreSQL database service
+    services:
+      - ((db_service_name))
+
+    env:
+      NODE_ENV: production
+      PROTECTED_HOST: ((protected_host))
+
+    command: "set -eu && POSTGRES_HOST=$(node -e 'const s=JSON.parse(process.env.VCAP_SERVICES||\"{}\");const c=((s[\"aws-rds\"]||[])[0]||{}).credentials||{};process.stdout.write(c.host||\"\");') && POSTGRES_PORT=$(node -e 'const s=JSON.parse(process.env.VCAP_SERVICES||\"{}\");const c=((s[\"aws-rds\"]||[])[0]||{}).credentials||{};process.stdout.write(String(c.port||5432));') && POSTGRES_USER=$(node -e 'const s=JSON.parse(process.env.VCAP_SERVICES||\"{}\");const c=((s[\"aws-rds\"]||[])[0]||{}).credentials||{};process.stdout.write(c.username||\"\");') && POSTGRES_PASSWORD=$(node -e 'const s=JSON.parse(process.env.VCAP_SERVICES||\"{}\");const c=((s[\"aws-rds\"]||[])[0]||{}).credentials||{};process.stdout.write(c.password||\"\");') && POSTGRES_DB=$(node -e 'const s=JSON.parse(process.env.VCAP_SERVICES||\"{}\");const c=((s[\"aws-rds\"]||[])[0]||{}).credentials||{};process.stdout.write(c.db_name||\"\");') && printf 'app:\\n  baseUrl: https://%s\\nbackend:\\n  baseUrl: https://%s\\n  listen:\\n    port: %s\\n  database:\\n    client: pg\\n    connection:\\n      host: %s\\n      port: %s\\n      user: %s\\n      password: %s\\n      database: %s\\n      ssl:\\n        rejectUnauthorized: false\\nauth:\\n  environment: production\\n  providers:\\n    guest:\\n      dangerouslyAllowOutsideDevelopment: true\\n' \"${PROTECTED_HOST}\" \"${PROTECTED_HOST}\" \"${PORT:-7007}\" \"${POSTGRES_HOST}\" \"${POSTGRES_PORT}\" \"${POSTGRES_USER}\" \"${POSTGRES_PASSWORD}\" \"${POSTGRES_DB}\" > /tmp/app-config.cloudgov.yaml && cat /tmp/app-config.cloudgov.yaml && exec node packages/backend --config app-config.yaml --config /tmp/app-config.cloudgov.yaml"
+
+  # ==========================================================================
+  # OAuth2-Proxy (Public Gateway)
+  # ==========================================================================
+  # Handles Cloud.gov UAA authentication and forwards to Backstage
+  - name: ((proxy_name))
+    memory: 256M
+    disk_quota: 512M
+    instances: 1
+    docker:
+      image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0-alpine
+    routes:
+      - route: ((protected_host))
+    env:
+      UAA_SERVICE_NAME: ((uaa_service_name))
+      UPSTREAM_URL: ((upstream_url))
+      PROTECTED_HOST: ((protected_host))
+      OAUTH2_PROXY_COOKIE_SECRET: ((cookie_secret))
+      COOKIE_DOMAIN: ((cookie_domain))
+      WHITELIST_DOMAIN: ((whitelist_domain))
+      UAA_SCOPE: ((uaa_scope))
+    services:
+      - name: ((uaa_service_name))
+        parameters:
+          redirect_uri:
+            - https://((protected_host))/oauth2/callback
+    command: |
+      set -eu
+      export PORT="${PORT:-4180}"
+
+      # Parse credentials from VCAP_SERVICES using robust busybox grep/cut
+      CLIENT_ID=$(echo "$VCAP_SERVICES" | grep -oE '"client_id": *"[^"]+"' | head -n1 | cut -d'"' -f4)
+      CLIENT_SECRET=$(echo "$VCAP_SERVICES" | grep -oE '"client_secret": *"[^"]+"' | head -n1 | cut -d'"' -f4)
+
+      if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
+        echo "Error: Failed to parse UAA credentials from VCAP_SERVICES" >&2
+        exit 1
+      fi
+
+      export OAUTH2_PROXY_PROVIDER="oidc"
+      export OAUTH2_PROXY_CLIENT_ID="$CLIENT_ID"
+      export OAUTH2_PROXY_CLIENT_SECRET="$CLIENT_SECRET"
+      export OAUTH2_PROXY_OIDC_ISSUER_URL="https://login.fr.cloud.gov/oauth/token"
+      export OAUTH2_PROXY_INSECURE_OIDC_SKIP_ISSUER_VERIFICATION="true"
+      export OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL="true"
+      export OAUTH2_PROXY_HTTP_ADDRESS="0.0.0.0:${PORT}"
+      export OAUTH2_PROXY_REDIRECT_URL="https://${PROTECTED_HOST}/oauth2/callback"
+      export OAUTH2_PROXY_UPSTREAMS="${UPSTREAM_URL}"
+      export OAUTH2_PROXY_COOKIE_DOMAINS="${COOKIE_DOMAIN}"
+      export OAUTH2_PROXY_WHITELIST_DOMAINS="${WHITELIST_DOMAIN}"
+      export OAUTH2_PROXY_EMAIL_DOMAINS="*"
+      export OAUTH2_PROXY_COOKIE_SECURE="true"
+      export OAUTH2_PROXY_COOKIE_SAMESITE="lax"
+      export OAUTH2_PROXY_PASS_HOST_HEADER="true"
+      export OAUTH2_PROXY_REVERSE_PROXY="true"
+      export OAUTH2_PROXY_SKIP_PROVIDER_BUTTON="true"
+      export OAUTH2_PROXY_SCOPE="${UAA_SCOPE}"
+      # Pass user headers to Backstage for identity
+      export OAUTH2_PROXY_PASS_USER_HEADERS="true"
+      export OAUTH2_PROXY_SET_XAUTHREQUEST="true"
+
+      exec oauth2-proxy
