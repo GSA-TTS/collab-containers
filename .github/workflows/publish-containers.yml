@@ -1,0 +1,197 @@
+name: Publish Containers
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: Release version without a leading v
+        required: true
+        type: string
+  release:
+    types:
+      - published
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.discover.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Discover Docker build contexts
+        id: discover
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          matrix_json="$({
+            shopt -s nullglob
+            found=0
+            printf '{"include":['
+            for dockerfile in */Dockerfile; do
+              found=1
+              context_dir="${dockerfile%/Dockerfile}"
+              image_name="$(printf '%s' "$context_dir" | tr '[:upper:]' '[:lower:]')"
+              printf '{"context":"%s","dockerfile":"%s","image":"%s"},' \
+                "$context_dir" "$dockerfile" "$image_name"
+            done
+            if [[ "$found" -eq 0 ]]; then
+              printf ']}'
+            else
+              printf '\b]}'
+            fi
+          })"
+
+          echo "matrix=$matrix_json" >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: discover
+    if: ${{ fromJson(needs.discover.outputs.matrix).include[0] != null }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository_owner }}/${{ matrix.image }}
+      RELEASE_VERSION: ${{ github.event_name == 'release' && github.event.release.tag_name || format('v{0}', inputs.release_version) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ env.RELEASE_VERSION }}
+            type=raw,value=latest
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Run DockSec scan-only analysis
+        env:
+          DOCKSEC_RESULTS_DIR: ${{ runner.temp }}/docksec-results/${{ matrix.image }}
+        uses: ./DockSec
+        with:
+          dockerfile: ${{ matrix.dockerfile }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
+          scan_only: "true"
+
+      - name: Collect DockSec reports
+        id: reports
+        env:
+          DOCKSEC_RESULTS_DIR: ${{ runner.temp }}/docksec-results/${{ matrix.image }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          import os
+          import pathlib
+
+          output_path = pathlib.Path(os.environ["GITHUB_OUTPUT"])
+          results_root = pathlib.Path(os.environ["DOCKSEC_RESULTS_DIR"])
+
+          report_dirs = sorted(
+              [path for path in results_root.iterdir() if path.is_dir()],
+              key=lambda path: path.stat().st_mtime,
+              reverse=True,
+          ) if results_root.exists() else []
+
+          if not report_dirs:
+              raise SystemExit("DockSec did not produce a report directory")
+
+          latest_dir = report_dirs[0]
+          reports = {
+              "json_report": next(latest_dir.glob("*.json"), None),
+              "html_report": next(latest_dir.glob("*.html"), None),
+              "csv_report": next(latest_dir.glob("*.csv"), None),
+              "pdf_report": next(latest_dir.glob("*.pdf"), None),
+          }
+
+          if reports["json_report"] is None:
+              raise SystemExit(f"DockSec JSON report not found in {latest_dir}")
+
+          with output_path.open("a", encoding="utf-8") as fh:
+              fh.write(f"results_dir={latest_dir}\n")
+              for key, value in reports.items():
+                  fh.write(f"{key}={value or ''}\n")
+          PY
+
+      - name: Upload scan artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.image }}-${{ env.RELEASE_VERSION }}-docksec
+          path: |
+            ${{ steps.reports.outputs.results_dir }}
+
+      - name: Create container release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MATRIX_IMAGE: ${{ matrix.image }}
+          JSON_REPORT: ${{ steps.reports.outputs.json_report }}
+          HTML_REPORT: ${{ steps.reports.outputs.html_report }}
+          CSV_REPORT: ${{ steps.reports.outputs.csv_report }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          tag="${MATRIX_IMAGE}-${RELEASE_VERSION}"
+          title="${MATRIX_IMAGE} ${RELEASE_VERSION}"
+          image_ref="${REGISTRY}/${IMAGE_NAME}:${RELEASE_VERSION}"
+          notes=$(cat <<EOF
+          Published container image for ${MATRIX_IMAGE}.
+
+          Image:
+          ${image_ref}
+
+          Findings:
+          - DockSec reports attached to this release
+          EOF
+          )
+
+          assets=("${JSON_REPORT}#${MATRIX_IMAGE}-docksec-report.json")
+          if [[ -n "${HTML_REPORT}" ]]; then
+            assets+=("${HTML_REPORT}#${MATRIX_IMAGE}-docksec-report.html")
+          fi
+          if [[ -n "${CSV_REPORT}" ]]; then
+            assets+=("${CSV_REPORT}#${MATRIX_IMAGE}-docksec-report.csv")
+          fi
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" --clobber "${assets[@]}"
+            gh release edit "$tag" --title "$title" --notes "$notes"
+          else
+            gh release create "$tag" --title "$title" --notes "$notes" "${assets[@]}"
+          fi

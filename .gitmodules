@@ -1,0 +1,3 @@
+[submodule "DockSec"]
+	path = DockSec
+	url = https://github.com/OWASP/DockSec
