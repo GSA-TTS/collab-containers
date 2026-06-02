@@ -1,0 +1,88 @@
+name: Container Scan
+
+on:
+  pull_request:
+    paths:
+      - "*/Dockerfile"
+      - "*/init.sh"
+      - ".github/workflows/publish-containers.yml"
+      - ".github/workflows/container-scan-on-pr.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.discover.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Discover Docker build contexts
+        id: discover
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          matrix_json="$({
+            shopt -s nullglob
+            found=0
+            printf '{"include":['
+            for dockerfile in */Dockerfile; do
+              found=1
+              context_dir="${dockerfile%/Dockerfile}"
+              image_name="$(printf '%s' "$context_dir" | tr '[:upper:]' '[:lower:]')"
+              printf '{"context":"%s","dockerfile":"%s","image":"%s"},' \
+                "$context_dir" "$dockerfile" "$image_name"
+            done
+            if [[ "$found" -eq 0 ]]; then
+              printf ']}'
+            else
+              printf '\b]}'
+            fi
+          })"
+
+          echo "matrix=$matrix_json" >> "$GITHUB_OUTPUT"
+
+  scan:
+    needs: discover
+    if: ${{ fromJson(needs.discover.outputs.matrix).include[0] != null }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build local image
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          load: true
+          tags: local/${{ matrix.image }}:pr-${{ github.event.pull_request.number }}
+
+      - name: Run DockSec scan-only analysis
+        env:
+          DOCKSEC_RESULTS_DIR: ${{ runner.temp }}/docksec-results/${{ matrix.image }}
+        uses: ./DockSec
+        with:
+          dockerfile: ${{ matrix.dockerfile }}
+          image: local/${{ matrix.image }}:pr-${{ github.event.pull_request.number }}
+          scan_only: "true"
+
+      - name: Upload DockSec artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-${{ matrix.image }}-docksec
+          path: ${{ runner.temp }}/docksec-results/${{ matrix.image }}
