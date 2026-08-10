@@ -8,6 +8,35 @@ The benchmark is split into three cohorts:
 - Brokered authority candidates deployed on Cloud.gov: `keycloak`, `zitadel`
 - Comparison candidates that need manual bootstrap or do not fit the direct-UAA model: `authentik`, `authelia`
 
+---
+
+## Recommendation — Winner: Keycloak
+
+> **Winner: Keycloak.**
+> Selected as the recommended identity solution for GSA federal application teams evaluated in this benchmark. Also referred to below as the **Recommended solution** to satisfy contexts that prefer non-competitive phrasing.
+
+> **Keycloak is currently used for USAi, PIC, and Touchpoints, and is used in actively authorized systems.**
+
+**Rationale**
+
+- Full-featured IAM (identity brokering, MFA, RBAC, protocol breadth across OIDC / OAuth 2.0 / SAML 2.0) without vendor lock-in.
+- Operates cleanly on cloud.gov as a Docker-image `cf` app backed by `aws-rds` Postgres, matching the platform's supported patterns.
+- Standards-based OIDC / OAuth 2.0 / SAML — downstream client apps stay portable across identity backends.
+- Actively maintained upstream with a strong community and long support horizon.
+- Production-proven inside GSA: currently powering **USAi, PIC, and Touchpoints** on actively authorized systems.
+
+**Cross-references**
+
+- Reusable container image: [`ghcr.io/gsa-tts/terraform-cloudgov/keycloak-server:latest`](https://github.com/GSA-TTS/terraform-cloudgov/pkgs/container/terraform-cloudgov%2Fkeycloak-server)
+- Reference Terraform module used by GSA production deployments: [`GSA-TTS/pic-blm-cxworks`](https://github.com/GSA-TTS/pic-blm-cxworks) — see `terraform/apps/auth`.
+- In-flight Precogly example manifest: `precogly/manifest-keycloak.yml`.
+- Full candidate write-up: [`docs/candidates/keycloak.md`](./docs/candidates/keycloak.md).
+- Decision record: [`docs/decision.md`](./docs/decision.md).
+
+**Scope note.** This winner declaration covers the *identity solution for GSA federal application teams* — i.e., the platform teams choose to issue tokens, broker external IdPs (Cloud.gov UAA, Login.gov, SAML), and manage users. The separate sidecar-vs-proxy analysis further down (see [Final Decision & Why Alternatives are Not Recommended](#final-decision--why-alternatives-are-not-recommended)) still stands for the narrow question of *how a single collaboration container in this repository is fronted on cloud.gov*, where `oauth2-proxy` remains the pragmatic sidecar. The two decisions are complementary: Keycloak is the recommended IAM authority, and a thin proxy like `oauth2-proxy` may still be used as the per-app gatekeeper that talks to Keycloak (or directly to UAA in constrained deployments).
+
+---
+
 ## What is included
 
 - A fixture app with host, cookie, redirect, download, upload, SSE, and header inspection endpoints
@@ -172,6 +201,8 @@ Use the same test flow for every candidate:
 ## Scorecard Results & Recommendations
 
 A comprehensive, weighted evaluation was conducted on each candidate in the `staging` environment. The results are recorded in [`scorecard.csv`](./scorecard.csv) and summarized below:
+
+> **Note.** The weighted scorecard reflects proxy-oriented criteria (routing, transparency, policy expressiveness, operability of a thin sidecar). It does **not** score production-readiness at GSA. The overall benchmark winner (see [Recommendation — Winner: Keycloak](#recommendation--winner-keycloak)) is Keycloak on the strength of production adoption in **USAi, PIC, and Touchpoints** and its role as a full IAM authority. Per-scenario recommendations below still stand for the narrow "which thin proxy fronts a single container" question.
 
 | Candidate | Coverage Model (20) | Host & Routing (20) | Auth Capabilities (15) | Transparency (15) | Policy Expressiveness (15) | Operability (15) | **Weighted Total** |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
