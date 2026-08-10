@@ -3,6 +3,11 @@ applications:
     memory: 1G
     disk_quota: 1G
     instances: 1
+    # Keycloak's readiness endpoint on the management port is not routable from Gorouter, so probe /realms/master over HTTP.
+    health-check-type: http
+    health-check-http-endpoint: /realms/master
+    health-check-invocation-timeout: 30
+    timeout: 180
     docker:
       image: ghcr.io/gsa-tts/terraform-cloudgov/keycloak-server:latest
     routes:
@@ -13,6 +18,9 @@ applications:
       KC_HTTP_ENABLED: 'true'
       KC_PROXY_HEADERS: 'xforwarded'
       KC_HOSTNAME_STRICT: 'true'
+      KC_HEALTH_ENABLED: 'true'
+      KC_METRICS_ENABLED: 'true'
+      KC_LOG_LEVEL: 'INFO'
       KC_BOOTSTRAP_ADMIN_USERNAME: ((bootstrap_admin_username))
       KC_BOOTSTRAP_ADMIN_PASSWORD: ((bootstrap_admin_password))
     services:
