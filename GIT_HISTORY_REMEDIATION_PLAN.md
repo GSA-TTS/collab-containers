@@ -42,6 +42,17 @@ Initial triage should classify each row as real credential, generated secret, pl
 - Coordinate force-push timing with all active contributors.
 - Preserve a private backup before any destructive history rewrite.
 
+## Tooling Status
+
+Local check on 2026-09-11 found that `git-filter-repo` and BFG are not currently installed in the working environment. No install, history rewrite, or force-push was attempted.
+
+Preferred next step is an approved installation of `git-filter-repo` in a clean environment, followed by the disposable-clone dry run below. Built-in `git filter-branch` is available but should remain a last-resort option because it is slower, easier to misuse, and deprecated for most modern history-cleanup workflows.
+
+Explicit approval is still required before either of these actions:
+
+- Installing history-rewrite tooling such as `git-filter-repo` or BFG.
+- Rewriting and force-pushing repository history after the dry run succeeds.
+
 ## Recommended Path
 
 ### 1. Confirm Scope
