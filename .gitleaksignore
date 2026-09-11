@@ -1,0 +1,11 @@
+# Confirmed harmless historical findings accepted on 2026-09-11.
+# Keep this file scoped to individual fingerprints; do not add broad path or rule ignores.
+0d3840df603daa8519d339de5e85d39cdacdfbbe:auth-benchmark/LOGINGOV.md:generic-api-key:121
+424464e05ef6f7b404b32c357cfc8377377c0803:auth-benchmark/oauth2-proxy/manifest.yml:generic-api-key:7
+424464e05ef6f7b404b32c357cfc8377377c0803:auth-benchmark/oauth2-proxy/vars.yml:generic-api-key:5
+424464e05ef6f7b404b32c357cfc8377377c0803:auth-benchmark/pomerium/vars.yml:generic-api-key:7
+424464e05ef6f7b404b32c357cfc8377377c0803:auth-benchmark/pomerium/vars.yml:generic-api-key:8
+496219d5709b3b0a6475c45bd97d2971a385428a:openobserve/oauth2-proxy-manifest.yml:generic-api-key:10
+632eb1b4a00da9901ad7f1255d42dada6000693e:auth-benchmark/pomerium/vars.yml:generic-api-key:8
+cc704c1f569721a4d8a0f9fef076b664abb02f84:backstage/manifest.yml:generic-api-key:40
+cc704c1f569721a4d8a0f9fef076b664abb02f84:backstage/vars.yml:generic-api-key:23
