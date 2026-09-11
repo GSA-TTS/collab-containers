@@ -1,9 +1,12 @@
+---
+# yamllint disable rule:line-length
 applications:
   - name: ((app_name))
     memory: 1G
     disk_quota: 1G
     instances: 1
-    # Keycloak's readiness endpoint on the management port is not routable from Gorouter, so probe /realms/master over HTTP.
+    # Keycloak's readiness endpoint on the management port is not routable
+    # from Gorouter, so probe /realms/master over HTTP.
     health-check-type: http
     health-check-http-endpoint: /realms/master
     health-check-invocation-timeout: 30

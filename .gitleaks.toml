@@ -1,0 +1,66 @@
+# Gitleaks Configuration for collab-containers
+#
+# This config detects secrets in git history using pattern matching.
+# Reference: https://github.com/gitleaks/gitleaks/wiki/Config-Template-\(v8\)
+
+title = "Gitleaks config for collab-containers"
+
+[extend]
+useDefault = true
+
+# Custom rules added to defaults
+[[rules]]
+id = "github-pat"
+description = "GitHub Personal Access Token"
+regex = '''ghp_[0-9a-zA-Z]{36}'''
+tags = ["key", "GitHub"]
+
+[[rules]]
+id = "github-oauth"
+description = "GitHub OAuth Token"
+regex = '''gho_[0-9a-zA-Z]{36}'''
+tags = ["key", "GitHub"]
+
+[[rules]]
+id = "github-app-token"
+description = "GitHub App Token"
+regex = '''ghu_[0-9a-zA-Z]{36}'''
+tags = ["key", "GitHub"]
+
+[[rules]]
+id = "usai-api-key"
+description = "USAi API Key (federal AI service)"
+regex = '''usai[_-]?key[_-]?[a-zA-Z0-9]{40,}'''
+keywords = ["usai", "usai_key", "usai_api_key"]
+tags = ["key", "USAi"]
+
+[[rules]]
+id = "cloud-gov-token"
+description = "Cloud.gov Credentials"
+regex = '''cf[_-]?token[_-]?[a-zA-Z0-9]{32,}'''
+keywords = ["cf_token", "cloud_gov"]
+tags = ["key", "CloudGov"]
+
+[[rules]]
+id = "docker-config"
+description = "Docker Config File Credentials"
+regex = '''\"auths\"\s*:\s*\{[\s\S]*?\"auth\"\s*:\s*\"[A-Za-z0-9+/=]{20,}\"'''
+keywords = ["docker", "auths", "auth"]
+tags = ["config", "Docker"]
+
+# Exceptions: paths and patterns to allowlist
+[allowlist]
+paths = [
+  "(?i)renovate\\.json",    # Renovate config
+  "(?i)\\.gitignore",       # Git ignore
+  "(?i)LICENSE",            # License file
+]
+regexes = [
+  '''password:\s*\$\{POSTGRES_PASSWORD\}''',
+]
+
+# Allowlist by commit message
+commits = [
+  "^chore\\(deps\\):",      # Dependency updates
+  "^docs:",                 # Documentation
+]

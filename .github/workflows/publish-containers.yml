@@ -1,3 +1,5 @@
+---
+# yamllint disable rule:line-length rule:truthy
 name: Publish Containers
 
 on:
@@ -13,6 +15,8 @@ on:
 
 permissions:
   contents: read
+  packages: write
+  security-events: write  # Required for uploading SARIF reports
 
 jobs:
   discover:
@@ -24,6 +28,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          submodules: recursive
 
       - name: Discover Docker build contexts
         id: discover
@@ -58,18 +63,28 @@ jobs:
     permissions:
       contents: write
       packages: write
+      security-events: write
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
     env:
       REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository_owner }}/${{ matrix.image }}
       RELEASE_VERSION: ${{ github.event_name == 'release' && github.event.release.tag_name || format('v{0}', inputs.release_version) }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          submodules: recursive
+
+      - name: Normalize image name
+        env:
+          MATRIX_IMAGE: ${{ matrix.image }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "IMAGE_NAME=${REPOSITORY_OWNER,,}/${MATRIX_IMAGE}" >> "$GITHUB_ENV"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -98,6 +113,47 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Run Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
+          format: 'sarif'
+          output: trivy-results-${{ matrix.image }}.sarif
+          severity: 'HIGH,CRITICAL'
+          scanners: 'vuln,config,secret'
+
+      - name: Generate SBOM (SPDX)
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
+          format: 'spdx-json'
+          output: sbom-${{ matrix.image }}-spdx.json
+
+      - name: Generate SBOM (CycloneDX)
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
+          format: 'cyclonedx'
+          output: sbom-${{ matrix.image }}-cyclonedx.json
+
+      - name: Upload Trivy SARIF report to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results-${{ matrix.image }}.sarif
+          category: trivy-${{ matrix.image }}
+
+      - name: Store scan and SBOM artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ matrix.image }}-${{ env.RELEASE_VERSION }}-security-reports
+          path: |
+            trivy-results-${{ matrix.image }}.sarif
+            sbom-${{ matrix.image }}-spdx.json
+            sbom-${{ matrix.image }}-cyclonedx.json
+          retention-days: 90
 
       - name: Run DockSec scan-only analysis
         env:
@@ -173,20 +229,54 @@ jobs:
           notes=$(cat <<EOF
           Published container image for ${MATRIX_IMAGE}.
 
-          Image:
+          ## Image Reference
+          \`\`\`
           ${image_ref}
+          \`\`\`
 
-          Findings:
-          - DockSec reports attached to this release
+          ## Security Reports
+          This release includes:
+          - **Trivy** vulnerability scan (SARIF format)
+          - **DockSec** analysis (JSON, HTML, CSV)
+          - **SBOM** (Software Bill of Materials) in SPDX and CycloneDX formats
+          - **CodeQL** integration for GitHub Security tab
+
+          Review the attached reports to verify security compliance before deployment.
+
+          ## Deployment Options
+
+          ### Option 1: Deploy from Registry (Recommended)
+          \`\`\`bash
+          docker pull ${image_ref}
+          docker run -d ${image_ref}
+          \`\`\`
+
+          ### Option 2: Build Locally
+          \`\`\`bash
+          git clone https://github.com/${GITHUB_REPOSITORY}.git
+          cd ${MATRIX_IMAGE}
+          docker build -t ${MATRIX_IMAGE}:${RELEASE_VERSION} .
+          \`\`\`
+
+          ## Verification
+          All images are scanned with:
+          - Trivy (vulnerability & configuration)
+          - DockSec (comprehensive security analysis)
+          - Gitleaks (secret detection)
+
+          Reports attached to this release.
           EOF
           )
 
-          assets=("${JSON_REPORT}#${MATRIX_IMAGE}-docksec-report.json")
+          assets=("trivy-results-${MATRIX_IMAGE}.sarif#trivy-vulnerability-scan.sarif")
+          assets+=("sbom-${MATRIX_IMAGE}-spdx.json#sbom-spdx.json")
+          assets+=("sbom-${MATRIX_IMAGE}-cyclonedx.json#sbom-cyclonedx.json")
+          assets+=("${JSON_REPORT}#docksec-report.json")
           if [[ -n "${HTML_REPORT}" ]]; then
-            assets+=("${HTML_REPORT}#${MATRIX_IMAGE}-docksec-report.html")
+            assets+=("${HTML_REPORT}#docksec-report.html")
           fi
           if [[ -n "${CSV_REPORT}" ]]; then
-            assets+=("${CSV_REPORT}#${MATRIX_IMAGE}-docksec-report.csv")
+            assets+=("${CSV_REPORT}#docksec-report.csv")
           fi
 
           if gh release view "$tag" >/dev/null 2>&1; then

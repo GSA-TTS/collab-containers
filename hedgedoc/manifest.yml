@@ -1,3 +1,4 @@
+---
 applications:
   - name: hedgedoc
     memory: 512M
@@ -38,13 +39,23 @@ applications:
       export NODE_ENV=production
       export CMD_CONFIG_FILE=/tmp/hedgedoc-config.json
       if [ -z "$DATABASE_URL" ] && [ -n "$VCAP_SERVICES" ]; then
-        export DATABASE_URL=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.uri || "");')
+        DATABASE_URL=$(
+          node <<'NODE'
+      const services = JSON.parse(process.env.VCAP_SERVICES || "{}");
+      const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {};
+      process.stdout.write(creds.uri || "");
+      NODE
+        )
+        export DATABASE_URL
       fi
       if [ -z "$DATABASE_URL" ]; then
         echo "DATABASE_URL is not set. Bind an aws-rds service before starting HedgeDoc."
         exit 1
       fi
-      export CMD_SESSION_SECRET="${CMD_SESSION_SECRET:-$(node -e 'console.log(require("crypto").randomBytes(32).toString("base64"))')}"
+      if [ -z "${CMD_SESSION_SECRET:-}" ]; then
+        CMD_SESSION_SECRET=$(node -e 'console.log(require("crypto").randomBytes(32).toString("base64"))')
+      fi
+      export CMD_SESSION_SECRET
       node -e '
         const config = {
           production: {

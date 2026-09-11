@@ -1,4 +1,5 @@
 ---
+# yamllint disable rule:line-length
 # oauth2-proxy sidecar for OpenObserve
 # Enforces Cloud.gov UAA authentication before proxying to OpenObserve
 applications:
@@ -7,7 +8,7 @@ applications:
     disk_quota: 512M
     instances: 1
     docker:
-      image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0-alpine
+      image: ((proxy_container_image))
     routes:
       # Public route - users access OpenObserve through this
       - route: ((protected_host))
@@ -34,7 +35,6 @@ applications:
 
       if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
         echo "Error: Failed to parse UAA credentials from VCAP_SERVICES" >&2
-        echo "VCAP_SERVICES was: $VCAP_SERVICES" >&2
         exit 1
       fi
 
@@ -44,34 +44,34 @@ applications:
       export OAUTH2_PROXY_CLIENT_ID="$CLIENT_ID"
       export OAUTH2_PROXY_CLIENT_SECRET="$CLIENT_SECRET"
       export OAUTH2_PROXY_OIDC_ISSUER_URL="https://login.fr.cloud.gov/oauth/token"
-      
+
       # Required for Cloud.gov split-domain architecture
       export OAUTH2_PROXY_INSECURE_OIDC_SKIP_ISSUER_VERIFICATION="true"
       # Required for GSA federated accounts (ADR 3: Unverified Email Bypass)
       export OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL="true"
-      
+
       # Proxy configuration
       export OAUTH2_PROXY_HTTP_ADDRESS="0.0.0.0:${PORT}"
       export OAUTH2_PROXY_REDIRECT_URL="https://${PROTECTED_HOST}/oauth2/callback"
       export OAUTH2_PROXY_UPSTREAMS="${UPSTREAM_URL}"
-      
+
       # Cookie configuration
       export OAUTH2_PROXY_COOKIE_DOMAINS="${COOKIE_DOMAIN}"
       export OAUTH2_PROXY_WHITELIST_DOMAINS="${WHITELIST_DOMAIN}"
       export OAUTH2_PROXY_EMAIL_DOMAINS="gsa.gov"
       export OAUTH2_PROXY_COOKIE_SECURE="true"
       export OAUTH2_PROXY_COOKIE_SAMESITE="lax"
-      
+
       # Proxy behavior
       export OAUTH2_PROXY_PASS_HOST_HEADER="false"
       export OAUTH2_PROXY_REVERSE_PROXY="true"
       export OAUTH2_PROXY_SKIP_PROVIDER_BUTTON="true"
       export OAUTH2_PROXY_SCOPE="${UAA_SCOPE}"
-      
+
       # Pass user identity headers to upstream
       export OAUTH2_PROXY_SET_XAUTHREQUEST="true"
       export OAUTH2_PROXY_PASS_ACCESS_TOKEN="true"
-      
+
       # Skip authentication for API endpoints (machine-to-machine)
       # These endpoints are protected by OpenObserve's built-in Basic Auth
       export OAUTH2_PROXY_SKIP_AUTH_ROUTES="^/api/,^/aws/,^/gcp/,^/azure/"

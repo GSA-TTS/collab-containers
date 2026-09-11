@@ -1,9 +1,44 @@
 
 # Collaboration Containers for Deployment on cloud.gov
 
->Ephemeral/Short-lived for prototyping only
+> A collection of containerized open-source collaboration tools, optimized for deployment on cloud.gov with security scanning and two deployment options (from GHCR registry or local build).
 
-Each folder contains a `manifest.yml` file to deploy an ephemeral container on cloud.gov. 
+**Status:** Public-release preparation is in progress. Current-file lint, Dockerfile lint, Trivy filesystem scan, and working-tree secret scanning pass. Git history remediation and release workflow verification are still required before making the repository public.
+
+## 🚀 Quick Start
+
+### For Users (Deploy Pre-Built Image)
+
+```bash
+# Pull and run (fastest, recommended for most users)
+docker pull ghcr.io/gsa-tts/hedgedoc:v1.0.0
+docker run -it ghcr.io/gsa-tts/hedgedoc:v1.0.0
+```
+
+### For Developers (Build Locally)
+
+```bash
+# Install mise (tool runner)
+curl https://mise.jdx.dev/install.sh | sh
+
+# Clone, build, and scan
+git clone https://github.com/GSA-TTS/collab-containers.git
+cd collab-containers
+mise run container:build-all   # Build with security scanning
+mise run scan:all              # Run all security checks
+```
+
+## 📖 Important Documentation
+
+| Document | For | Purpose |
+|----------|-----|---------|
+| [**PUBLIC_RELEASE_GUIDE.md**](./PUBLIC_RELEASE_GUIDE.md) | Everyone | Overview of current capabilities, options, and remaining blockers |
+| [**DEPLOYMENT.md**](./DEPLOYMENT.md) | Operators | Complete deployment guide: registry vs local build, security, production checklist |
+| [**SECURITY.md**](./SECURITY.md) | Security teams | Vulnerability reporting, scanning practices, compliance standards |
+| [**PUBLIC_READINESS_CHECKLIST.md**](./PUBLIC_READINESS_CHECKLIST.md) | Release managers | 100+ checklist items before public release, sign-off tracking |
+| [**mise.toml**](./mise.toml) | Developers | 30+ runnable tasks for security scanning, building, signing containers |
+
+**Start here:** [PUBLIC_RELEASE_GUIDE.md](./PUBLIC_RELEASE_GUIDE.md)
 
 ## Deployment Status
 
@@ -34,6 +69,39 @@ Each folder contains a `manifest.yml` file to deploy an ephemeral container on c
    ```
 4. Access the application at the domain specified in the `CMD_DOMAIN` environment variable.
 
+## Mise Tasks (Local Development)
+
+Run security checks and build tasks using `mise`:
+
+```bash
+# Security & Compliance
+mise run scan:all               # All security scans
+mise run scan:secrets           # Gitleaks secret detection
+mise run scan:dockerfile        # Hadolint linting
+mise run scan:trivy-fs          # Trivy filesystem scan
+mise run scan:trivy-container   # Trivy image scan
+
+# Container Building
+mise run container:build-all    # Build all images
+mise run container:inspect      # Inspect built image
+
+# SBOM & Signing
+mise run sbom:generate          # Generate SPDX + CycloneDX
+mise run sign:cosign-keygen     # Generate signing keys
+mise run sign:cosign-image      # Sign container image
+
+# CI/CD
+mise run ci:pre-release-check   # Pre-release verification
+
+# Help
+mise run help:security          # Security scanning guide
+mise run help:deployment        # Deployment options guide
+```
+
+See [mise.toml](./mise.toml) for all 30+ available tasks.
+
+---
+
 ## Benchmarking Auth Proxies
 
 Use [auth-benchmark](./auth-benchmark/) to compare UAA-backed auth proxies in front of fixture apps or any of the deployed collaboration containers in this repository.
@@ -53,6 +121,147 @@ This repository includes GitHub Actions workflows to discover every top-level `D
 1. Ensure Actions have permission to write packages and contents in the repository settings.
 2. Publish a repository release with a tag like `v1.2.3`, or run the workflow manually and provide `1.2.3` as `release_version`.
 3. Review findings in the workflow artifacts and in the per-container GitHub Releases.
+
+## Container Publishing and Security Scanning
+
+This repository includes automated GitHub Actions workflows that:
+
+1. **Discover** every top-level `Dockerfile`
+2. **Build** each container image
+3. **Scan** with multiple tools:
+   - **Trivy** — Vulnerability, configuration, and secret scanning (SARIF)
+   - **DockSec** — Comprehensive security analysis (JSON/HTML/CSV)
+4. **Generate** Software Bill of Materials (SBOM)
+   - SPDX format (industry standard)
+   - CycloneDX format (OWASP standard)
+5. **Publish** to GitHub Container Registry (GHCR)
+6. **Attach** security reports to GitHub Releases
+
+### Scanning Details
+
+**Trivy Scanning:**
+- Vulnerability detection (HIGH/CRITICAL severity)
+- Configuration best practices
+- Secret detection in images
+- SARIF format for GitHub Security tab integration
+
+**SBOM Generation:**
+- All dependencies documented with versions
+- Two formats for different compliance needs
+- Transparency for software supply chain
+
+**DockSec Analysis:**
+- Dockerfile best practices
+- Runtime security configuration
+- Layer efficiency analysis
+
+### Using Published Images
+
+1. **Navigate to [Releases](https://github.com/GSA-TTS/collab-containers/releases)**
+2. **Download security reports:**
+   - `trivy-vulnerability-scan.sarif`
+   - `sbom-spdx.json` / `sbom-cyclonedx.json`
+   - `docksec-report.html` or `.json`
+3. **Review findings** before production deployment
+4. **Deploy after reviewing reports** using `docker pull ghcr.io/gsa-tts/<app>:<version>`
+
+### How to Create a Release
+
+1. Ensure GitHub Actions have permission to write packages and contents
+2. Publish a GitHub release with a tag like `hedgedoc-v1.0.0`
+3. Or run `publish-containers.yml` manually with version `1.0.0`
+4. Review findings in workflow artifacts and per-container GitHub Release
+
+### CI/CD Integration
+
+- **Container Scan on PR** (`container-scan-on-pr.yml`)
+  - Runs on Dockerfile/init.sh changes
+  - Trivy + DockSec scans
+  - Reports in artifacts and GitHub Security tab
+
+- **Publish on Release** (`publish-containers.yml`)
+  - Runs on GitHub release publish
+  - Builds, scans, and publishes images
+  - Attaches comprehensive security reports
+  - Creates per-container release tags
+
+---
+
+## Deployment Options
+
+### Option 1: Deploy from GHCR (Registry) — Recommended
+
+✅ **Best for:** Most users, production deployments
+
+```bash
+# Pull pre-scanned image
+docker pull ghcr.io/gsa-tts/hedgedoc:v1.0.0
+
+# Deploy directly
+docker run -p 3000:3000 ghcr.io/gsa-tts/hedgedoc:v1.0.0
+
+# Or use cloud.gov manifest (pre-configured)
+cf push hedgedoc
+```
+
+**Advantages:**
+- Pre-scanned and verified
+- No local build required
+- Reproducible: same image every time
+- SBOM and security reports available
+- Faster deployment
+
+### Option 2: Build Locally from Dockerfile
+
+✅ **Best for:** Development, customization, advanced compliance needs
+
+```bash
+# Clone and build
+git clone https://github.com/GSA-TTS/collab-containers.git
+cd collab-containers/hedgedoc
+
+# Build with security checks
+docker build -t hedgedoc:local .
+
+# Scan before deployment
+trivy image hedgedoc:local
+
+# Deploy
+docker run -it hedgedoc:local
+```
+
+**Advantages:**
+- Full control over build environment
+- Can customize Dockerfile
+- Review source code before building
+- Sign images locally with Cosign
+- Push to private registry
+
+**See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed guides and examples.**
+
+---
+
+## Security & Compliance
+
+### Standards Alignment
+
+- ✅ **NIST SP 800-53** — Security controls for federal systems
+- ✅ **NIST SP 800-218** — Secure software development
+- ✅ **OWASP Top 10** — Web application security
+- ✅ **CIS Benchmarks** — Container security hardening
+- ✅ **SLSA Framework** — Software supply chain security
+
+### Scanning Tools
+
+- **Trivy** — Container vulnerability and secret scanning
+- **DockSec** — Comprehensive security analysis
+- **Gitleaks** — Git history secret detection
+- **Grype** — Dependency vulnerability analysis
+- **Hadolint** — Dockerfile best practices linting
+
+See [SECURITY.md](./SECURITY.md) for vulnerability reporting and compliance details.
+
+---
 
 ## Centralized Scanning Service
 

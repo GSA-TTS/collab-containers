@@ -3,9 +3,12 @@
 # =================================================================
 FROM node:20-bookworm AS build
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 WORKDIR /app
 
 # Install build dependencies for native modules
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     g++ \
@@ -27,12 +30,10 @@ RUN printf "backstage-app\nPostgreSQL\n" | npx @backstage/create-app@latest --sk
 # Copy our cloud.gov-optimized configuration
 COPY app-config.production.yaml /app/app-config.production.yaml
 
-# Install dependencies - ignore optional native module build failures
-RUN yarn install || true
-
-RUN yarn tsc
-
-RUN yarn build:backend
+# Install dependencies and build the backend
+RUN yarn install && \
+    yarn tsc && \
+    yarn build:backend
 
 # Extract the skeleton and bundle for the production image
 RUN mkdir -p packages/backend/dist/skeleton packages/backend/dist/bundle \
@@ -44,7 +45,10 @@ RUN mkdir -p packages/backend/dist/skeleton packages/backend/dist/bundle \
 # =================================================================
 FROM node:20-bookworm-slim AS runner
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 # Install runtime dependencies
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     g++ \
@@ -65,7 +69,7 @@ COPY --from=build --chown=node:node /app/yarn.lock /app/package.json ./
 COPY --from=build --chown=node:node /app/packages/backend/dist/skeleton/ ./
 
 # Install production dependencies only
-RUN yarn workspaces focus --all --production || true
+RUN yarn workspaces focus --all --production
 
 # Copy the built bundle
 COPY --from=build --chown=node:node /app/packages/backend/dist/bundle/ ./

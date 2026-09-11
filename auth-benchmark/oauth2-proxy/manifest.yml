@@ -1,17 +1,19 @@
+---
+# yamllint disable rule:line-length
 applications:
   - name: ((app_name))
     memory: 256M
     disk_quota: 512M
     instances: 1
     docker:
-      image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0-alpine
+      image: REPLACE_WITH_SECURE_VALUE
     routes:
       - route: ((protected_host))
     env:
       UAA_SERVICE_NAME: ((uaa_service_name))
       UPSTREAM_URL: ((upstream_url))
       PROTECTED_HOST: ((protected_host))
-      OAUTH2_PROXY_COOKIE_SECRET: ((cookie_secret))
+      OAUTH2_PROXY_COOKIE_SECRET: REPLACE_WITH_SECURE_RANDOM_VALUE
       COOKIE_DOMAIN: ((cookie_domain))
       WHITELIST_DOMAIN: ((whitelist_domain))
       UAA_SCOPE: ((uaa_scope))
@@ -31,7 +33,6 @@ applications:
 
       if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
         echo "Error: Failed to parse UAA credentials from VCAP_SERVICES" >&2
-        echo "VCAP_SERVICES was: $VCAP_SERVICES" >&2
         exit 1
       fi
 

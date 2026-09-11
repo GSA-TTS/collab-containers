@@ -1,4 +1,5 @@
 ---
+# yamllint disable rule:line-length
 applications:
   - name: planka-app
     memory: 512M
@@ -21,7 +22,10 @@ applications:
         volume: planka-data
     command: |
       if [ -z "$DATABASE_URL" ] && [ -n "$VCAP_SERVICES" ]; then
-        export DATABASE_URL=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || services["postgres"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.uri || "");')
+        DATABASE_URL=$(
+          node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || services["postgres"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.uri || "");'
+        )
+        export DATABASE_URL
       fi
       if [ -z "$DATABASE_URL" ]; then
         echo "DATABASE_URL is not set. Bind an aws-rds service before starting Planka."
@@ -56,10 +60,16 @@ applications:
       export PGSSLMODE=no-verify
       export KNEX_REJECT_UNAUTHORIZED_SSL_CERTIFICATE=false
       if [ -z "$OIDC_CLIENT_ID" ] && [ -n "$VCAP_SERVICES" ]; then
-        export OIDC_CLIENT_ID=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["cloud-gov-identity-provider"] || []).find(s => s.name === "planka-uaa") || {}).credentials || {}; process.stdout.write(creds.client_id || "");')
+        OIDC_CLIENT_ID=$(
+          node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["cloud-gov-identity-provider"] || []).find(s => s.name === "planka-uaa") || {}).credentials || {}; process.stdout.write(creds.client_id || "");'
+        )
+        export OIDC_CLIENT_ID
       fi
       if [ -z "$OIDC_CLIENT_SECRET" ] && [ -n "$VCAP_SERVICES" ]; then
-        export OIDC_CLIENT_SECRET=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["cloud-gov-identity-provider"] || []).find(s => s.name === "planka-uaa") || {}).credentials || {}; process.stdout.write(creds.client_secret || "");')
+        OIDC_CLIENT_SECRET=$(
+          node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["cloud-gov-identity-provider"] || []).find(s => s.name === "planka-uaa") || {}).credentials || {}; process.stdout.write(creds.client_secret || "");'
+        )
+        export OIDC_CLIENT_SECRET
       fi
       export SECRET_KEY="${SECRET_KEY:-$(node -e 'console.log(require("crypto").randomBytes(32).toString("hex"))')}"
       echo "Running Planka database migrations..."

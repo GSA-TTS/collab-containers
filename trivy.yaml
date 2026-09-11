@@ -1,0 +1,25 @@
+---
+# Trivy Configuration for Container and Dependency Scanning
+#
+# This configuration file defines scanning behavior for Trivy across
+# container images, filesystems, and dependencies.
+#
+# Documentation: https://aquasecurity.github.io/trivy/latest/docs/configuration/
+
+timeout: 5m0s
+format: table
+severity:
+  - MEDIUM
+  - HIGH
+  - CRITICAL
+scanners:
+  - vuln
+  - misconfig
+  - secret
+skip-dirs:
+  - node_modules
+  - .git
+  - vendor
+  - .venv
+  - __pycache__
+exit-code: 0

@@ -12,7 +12,7 @@ applications:
       # Basic configuration
       NODE_ENV: production
       ADMIN_KEY: ${RANDOM_SECRET_KEY}
-      STORAGE_LIMIT: 1800000000 # 1GB in bytes
+      STORAGE_LIMIT: 1800000000  # 1GB in bytes
       BASE_URL: https://cryptpad.app.cloud.gov
       TRUST_PROXY: "true"
     volume_mounts:

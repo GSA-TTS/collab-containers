@@ -1,3 +1,4 @@
+---
 # Zitadel Deployment Variables for cloud.gov
 # Usage: cf push --vars-file vars.yml
 

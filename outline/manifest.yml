@@ -1,4 +1,5 @@
 ---
+# yamllint disable rule:line-length
 applications:
   - name: outline-app
     memory: 768M

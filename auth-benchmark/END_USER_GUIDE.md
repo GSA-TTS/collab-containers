@@ -87,7 +87,7 @@ app_name: collab-hedgedoc-proxy
 protected_host: collab-hedgedoc.app.cloud.gov
 uaa_service_name: collab-hedgedoc-uaa
 upstream_url: http://hedgedoc.apps.internal:8080
-cookie_secret: "generate-a-32-byte-base64-string"
+cookie_secret: "REPLACE_WITH_SECURE_RANDOM_VALUE"
 cookie_domain: collab-hedgedoc.app.cloud.gov
 whitelist_domain: .app.cloud.gov
 uaa_scope: openid

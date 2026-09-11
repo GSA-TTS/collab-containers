@@ -26,7 +26,54 @@ applications:
       NODE_ENV: production
       PROTECTED_HOST: ((protected_host))
 
-    command: "set -eu && POSTGRES_HOST=$(node -e 'const s=JSON.parse(process.env.VCAP_SERVICES||\"{}\");const c=((s[\"aws-rds\"]||[])[0]||{}).credentials||{};process.stdout.write(c.host||\"\");') && POSTGRES_PORT=$(node -e 'const s=JSON.parse(process.env.VCAP_SERVICES||\"{}\");const c=((s[\"aws-rds\"]||[])[0]||{}).credentials||{};process.stdout.write(String(c.port||5432));') && POSTGRES_USER=$(node -e 'const s=JSON.parse(process.env.VCAP_SERVICES||\"{}\");const c=((s[\"aws-rds\"]||[])[0]||{}).credentials||{};process.stdout.write(c.username||\"\");') && POSTGRES_PASSWORD=$(node -e 'const s=JSON.parse(process.env.VCAP_SERVICES||\"{}\");const c=((s[\"aws-rds\"]||[])[0]||{}).credentials||{};process.stdout.write(c.password||\"\");') && POSTGRES_DB=$(node -e 'const s=JSON.parse(process.env.VCAP_SERVICES||\"{}\");const c=((s[\"aws-rds\"]||[])[0]||{}).credentials||{};process.stdout.write(c.db_name||\"\");') && printf 'app:\\n  baseUrl: https://%s\\nbackend:\\n  baseUrl: https://%s\\n  listen:\\n    port: %s\\n  database:\\n    client: pg\\n    connection:\\n      host: %s\\n      port: %s\\n      user: %s\\n      password: %s\\n      database: %s\\n      ssl:\\n        rejectUnauthorized: false\\nauth:\\n  environment: production\\n  providers:\\n    guest:\\n      dangerouslyAllowOutsideDevelopment: true\\n' \"${PROTECTED_HOST}\" \"${PROTECTED_HOST}\" \"${PORT:-7007}\" \"${POSTGRES_HOST}\" \"${POSTGRES_PORT}\" \"${POSTGRES_USER}\" \"${POSTGRES_PASSWORD}\" \"${POSTGRES_DB}\" > /tmp/app-config.cloudgov.yaml && cat /tmp/app-config.cloudgov.yaml && exec node packages/backend --config app-config.yaml --config /tmp/app-config.cloudgov.yaml"
+    command: |
+      set -eu
+
+      parse_rds_credential() {
+        node -e '
+          const services = JSON.parse(process.env.VCAP_SERVICES || "{}");
+          const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {};
+          const key = process.argv[1];
+          process.stdout.write(String(creds[key] || ""));
+        ' "$1"
+      }
+
+      POSTGRES_HOST=$(parse_rds_credential host)
+      POSTGRES_PORT=$(parse_rds_credential port)
+      POSTGRES_USER=$(parse_rds_credential username)
+      POSTGRES_PASSWORD=$(parse_rds_credential password)
+      POSTGRES_DB=$(parse_rds_credential db_name)
+      POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+      export POSTGRES_HOST POSTGRES_PORT POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB
+
+      cat > /tmp/app-config.cloudgov.yaml <<EOF
+      app:
+        baseUrl: https://${PROTECTED_HOST}
+      backend:
+        baseUrl: https://${PROTECTED_HOST}
+        listen:
+          port: ${PORT:-7007}
+        database:
+          client: pg
+          connection:
+            host: ${POSTGRES_HOST}
+            port: ${POSTGRES_PORT}
+            user: ${POSTGRES_USER}
+            password: ${POSTGRES_PASSWORD}
+            database: ${POSTGRES_DB}
+            ssl:
+              rejectUnauthorized: false
+      auth:
+        environment: production
+        providers:
+          guest:
+            dangerouslyAllowOutsideDevelopment: true
+      EOF
+
+      cat /tmp/app-config.cloudgov.yaml
+      exec node packages/backend \
+        --config app-config.yaml \
+        --config /tmp/app-config.cloudgov.yaml
 
   # ==========================================================================
   # OAuth2-Proxy (Public Gateway)
@@ -37,7 +84,7 @@ applications:
     disk_quota: 512M
     instances: 1
     docker:
-      image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0-alpine
+      image: ((proxy_container_image))
     routes:
       - route: ((protected_host))
     env:

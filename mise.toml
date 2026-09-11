@@ -1,0 +1,430 @@
+# mise Configuration for Collaboration Containers
+#
+# This file defines development tools, security scanners, and task runners
+# for the collab-containers project.
+#
+# Installation & Usage:
+#   1. Install mise: https://mise.jdx.dev/getting-started.html
+#   2. Run: mise install         (installs all tools defined below)
+#   3. Run: mise tasks           (lists available tasks)
+#   4. Run: mise run <task>      (runs a specific task)
+#   5. Run: mise r scan:all      (shorthand syntax)
+#
+# Note: Tool versions are pinned for reproducible builds and security scanning.
+
+# Tool versions and sources
+[tools]
+# Container and dependency security scanning
+trivy = "0.74.0"              # Container/filesystem/dependency scanner (SPDX/CycloneDX SBOM)
+grype = "0.76.0"              # Dependency scanner (Syft-integrated)
+
+# Secret scanning and leak detection
+gitleaks = "8.21.0"           # Git history secret scanner
+#talisman = "1.32.0"  # Not available in mise registry           # Pre-commit secret detection hook
+
+# Container/dockerfile linting and security
+hadolint = "2.12.0"           # Dockerfile linter
+dive = "0.12.0"               # Container layer analyzer (size/content inspection)
+
+# YAML and shell linting
+yamllint = "1.35.1"           # YAML validator/linter
+shellcheck = "0.10.0"         # Shell script linter
+
+# SBOM and software supply chain tools
+syft = "1.9.0"                # Software Bill of Materials (SBOM) generator
+cyclonedx = "0.33.1"          # CycloneDX SBOM format validator (Python)
+
+# General utilities
+jq = "1.7.1"                  # JSON query and manipulation
+yq = "4.43.1"                 # YAML query and manipulation
+#curl = "8.7.1"  # Not available in mise registry                # HTTP client (for API interactions)
+#git = "2.46.0"  # Not available in mise registry                # Version control
+
+# Container/registry tools
+#docker = "27.0.0"  # Not available in mise registry             # Docker CLI (for local builds)
+cosign = "2.2.2"              # Container image signing and verification (SLSA provenance)
+
+
+# ============================================================================
+# TASKS: Define runnable checks, scans, and deployment actions
+# ============================================================================
+
+[tasks]
+
+# ============================================================================
+# SCAN: Container, Filesystem, and Dependency Security
+# ============================================================================
+
+"scan:trivy-container" = """
+#!/bin/bash
+set -euo pipefail
+echo "=== Trivy: Container Image Scanning ==="
+if [[ ${1:-} ]]; then
+  trivy image --severity HIGH,CRITICAL --format sarif --output trivy-image-$1.sarif "local/$1:latest"
+  echo "✓ Image scan complete: trivy-image-$1.sarif"
+else
+  echo "Usage: mise run scan:trivy-container <image-name>"
+  exit 1
+fi
+"""
+
+"scan:trivy-fs" = """
+#!/bin/bash
+set -euo pipefail
+echo "=== Trivy: Filesystem Scanning ==="
+target="${1:-.}"
+trivy fs --severity HIGH,CRITICAL --format sarif --output trivy-fs-results.sarif "$target"
+echo "✓ Filesystem scan complete: trivy-fs-results.sarif"
+"""
+
+"scan:trivy-sbom" = """
+#!/bin/bash
+set -euo pipefail
+echo "=== Trivy: SBOM Generation (SPDX) ==="
+if [[ ${1:-} ]]; then
+  trivy image --format spdx-json --output trivy-sbom-$1.json "local/$1:latest"
+  trivy image --format cyclonedx-json --output trivy-sbom-$1-cyclonedx.json "local/$1:latest"
+  echo "✓ SBOM generated:"
+  echo "   - trivy-sbom-$1.json (SPDX)"
+  echo "   - trivy-sbom-$1-cyclonedx.json (CycloneDX)"
+else
+  echo "Usage: mise run scan:trivy-sbom <image-name>"
+  exit 1
+fi
+"""
+
+"scan:grype" = """
+#!/bin/bash
+set -euo pipefail
+echo "=== Grype: Dependency Vulnerability Scan ==="
+target="${1:-.}"
+grype "$target" --fail-on high
+echo "✓ Grype scan complete"
+"""
+
+"scan:secrets" = """
+#!/bin/bash
+set -euo pipefail
+echo "=== Gitleaks: Secret Scan (Git History) ==="
+if gitleaks detect --source . --verbose; then
+  echo "✓ No secrets found in git history"
+else
+  echo "✗ Secrets detected in git history!"
+  exit 1
+fi
+"""
+
+"scan:dockerfile" = """
+#!/bin/bash
+set -euo pipefail
+echo "=== Hadolint: Dockerfile Linting ==="
+find . -name "Dockerfile" -type f | while read -r dockerfile; do
+  echo "Linting: $dockerfile"
+  hadolint "$dockerfile"
+done
+echo "✓ Dockerfile lint complete"
+"""
+
+"scan:all" = """
+#!/bin/bash
+set -euo pipefail
+echo "========================================="
+echo "   COMPREHENSIVE SECURITY SCAN"
+echo "========================================="
+echo ""
+
+echo "1. Running secret scan..."
+mise run scan:secrets
+echo ""
+
+echo "2. Running Dockerfile linting..."
+mise run scan:dockerfile
+echo ""
+
+echo "3. Running filesystem scan..."
+mise run scan:trivy-fs
+echo ""
+
+echo "========================================="
+echo "   SCAN COMPLETE"
+echo "========================================="
+echo ""
+echo "Review results in:"
+echo "  - trivy-fs-results.sarif"
+echo "  - .gitleaks.toml (for secret patterns)"
+"""
+
+# ============================================================================
+# LINT: Code and Configuration Quality
+# ============================================================================
+
+"lint:yaml" = """
+#!/bin/bash
+set -euo pipefail
+echo "=== YAMLLint: Configuration Files ==="
+find . -type f -name "*.yml" -o -name "*.yaml" | grep -v '.git' | grep -v 'node_modules' | while read f; do
+  yamllint -d '{extends: default, rules: {line-length: {max: 120}}}' "$f"
+done
+echo "✓ YAML linting complete"
+"""
+
+"lint:shell" = """
+#!/bin/bash
+set -euo pipefail
+echo "=== ShellCheck: Shell Script Analysis ==="
+find . -type f -name "*.sh" | grep -v '.git' | grep -v 'node_modules' | while read f; do
+  shellcheck "$f"
+done
+echo "✓ Shell script linting complete"
+"""
+
+"lint:all" = """
+#!/bin/bash
+set -euo pipefail
+echo "========================================="
+echo "   LINT CHECK"
+echo "========================================="
+echo ""
+mise run lint:yaml
+echo ""
+mise run lint:shell
+echo ""
+echo "✓ Linting complete"
+"""
+
+# ============================================================================
+# SBOM: Software Bill of Materials Generation
+# ============================================================================
+
+"sbom:generate" = """
+#!/bin/bash
+set -euo pipefail
+echo "=== Syft: SBOM Generation ==="
+if [[ ${1:-} ]]; then
+  mkdir -p sbom
+  syft "local/$1:latest" -o spdx-json > "sbom/$1-spdx.json"
+  syft "local/$1:latest" -o cyclonedx-json > "sbom/$1-cyclonedx.json"
+  echo "✓ SBOM generated in sbom/ directory:"
+  ls -lh sbom/$1-*.json
+else
+  echo "Usage: mise run sbom:generate <image-name>"
+  exit 1
+fi
+"""
+
+"sbom:all" = """
+#!/bin/bash
+set -euo pipefail
+echo "=== Generating SBOM for all images with Dockerfiles ==="
+mkdir -p sbom
+find . -maxdepth 2 -name "Dockerfile" -type f | while read -r dockerfile; do
+  dir=$(dirname "$dockerfile")
+  image_name=$(basename "$dir" | tr '[:upper:]' '[:lower:]')
+  echo "Generating SBOM for: $image_name"
+  syft "local/$image_name:latest" -o spdx-json > "sbom/$image_name-spdx.json" 2>/dev/null || true
+done
+echo "✓ SBOMs generated in sbom/ directory"
+"""
+
+# ============================================================================
+# CONTAINER: Building and Analyzing Docker Images
+# ============================================================================
+
+"container:build-all" = """
+#!/bin/bash
+set -euo pipefail
+echo "========================================="
+echo "   BUILD ALL CONTAINERS"
+echo "========================================="
+echo ""
+find . -maxdepth 2 -name "Dockerfile" -type f | while read -r dockerfile; do
+  context=$(dirname "$dockerfile")
+  image_name=$(basename "$context" | tr '[:upper:]' '[:lower:]')
+  echo "Building: $image_name from $context/Dockerfile"
+  docker build -t "local/$image_name:latest" -f "$dockerfile" "$context"
+  echo "✓ Built: local/$image_name:latest"
+  echo ""
+done
+echo "========================================="
+echo "   BUILD COMPLETE"
+echo "========================================="
+"""
+
+"container:dive-analysis" = """
+#!/bin/bash
+set -euo pipefail
+echo "=== Dive: Container Layer Analysis ==="
+if [[ ${1:-} ]]; then
+  dive "local/$1:latest"
+else
+  echo "Usage: mise run container:dive-analysis <image-name>"
+  echo "Note: This opens an interactive CLI for layer inspection"
+  exit 1
+fi
+"""
+
+"container:inspect" = """
+#!/bin/bash
+set -euo pipefail
+echo "=== Container Image Inspection ==="
+if [[ ${1:-} ]]; then
+  echo "Image: local/$1:latest"
+  echo ""
+  echo "Size Analysis:"
+  docker inspect "local/$1:latest" | jq '.[].Size' | numfmt --to=iec
+  echo ""
+  echo "Config:"
+  docker inspect "local/$1:latest" | jq '.[].Config' | head -20
+else
+  echo "Usage: mise run container:inspect <image-name>"
+  exit 1
+fi
+"""
+
+# ============================================================================
+# SIGN: Container Image Signing (SLSA Provenance)
+# ============================================================================
+
+"sign:cosign-keygen" = """
+#!/bin/bash
+set -euo pipefail
+echo "=== Cosign: Generate Signing Keys ==="
+if [[ -f cosign.key && -f cosign.pub ]]; then
+  echo "⚠ Keys already exist. Skipping generation."
+else
+  cosign generate-key-pair
+  echo "✓ Keys generated:"
+  echo "  - cosign.key (private, keep safe!)"
+  echo "  - cosign.pub (public, distribute)"
+fi
+"""
+
+"sign:cosign-image" = """
+#!/bin/bash
+set -euo pipefail
+echo "=== Cosign: Sign Container Image ==="
+if [[ ${1:-} ]]; then
+  if [[ ! -f cosign.key ]]; then
+    echo "✗ cosign.key not found. Run: mise run sign:cosign-keygen"
+    exit 1
+  fi
+  cosign sign --key cosign.key "$1"
+  echo "✓ Image signed: $1"
+else
+  echo "Usage: mise run sign:cosign-image <image-uri>"
+  echo "Example: mise run sign:cosign-image ghcr.io/gsa-tts/hedgedoc:v1.0"
+  exit 1
+fi
+"""
+
+"sign:cosign-verify" = """
+#!/bin/bash
+set -euo pipefail
+echo "=== Cosign: Verify Signature ==="
+if [[ ${1:-} ]]; then
+  if [[ ! -f cosign.pub ]]; then
+    echo "✗ cosign.pub not found. Ensure public key is available."
+    exit 1
+  fi
+  cosign verify --key cosign.pub "$1"
+  echo "✓ Signature verified: $1"
+else
+  echo "Usage: mise run sign:cosign-verify <image-uri>"
+  exit 1
+fi
+"""
+
+# ============================================================================
+# CLEAN: Cleanup and Maintenance
+# ============================================================================
+
+"clean:trivy-cache" = """
+#!/bin/bash
+set -euo pipefail
+echo "Clearing Trivy vulnerability database cache..."
+trivy clean --all
+echo "✓ Trivy cache cleared"
+"""
+
+"clean:docker-prune" = """
+#!/bin/bash
+set -euo pipefail
+echo "Cleaning up Docker resources..."
+docker image prune -f
+docker container prune -f
+docker volume prune -f
+echo "✓ Docker cleanup complete"
+"""
+
+"clean:scan-artifacts" = """
+#!/bin/bash
+set -euo pipefail
+echo "Removing scan artifacts..."
+rm -fv trivy-*.sarif
+rm -fv trivy-sbom-*.json
+echo "✓ Artifacts cleared"
+"""
+
+"clean:all" = """
+#!/bin/bash
+set -euo pipefail
+echo "========================================="
+echo "   CLEANUP: ALL"
+echo "========================================="
+mise run clean:trivy-cache
+mise run clean:docker-prune
+mise run clean:scan-artifacts
+echo "✓ Full cleanup complete"
+"""
+
+# ============================================================================
+# HELP & DOCUMENTATION
+# ============================================================================
+
+"help:security" = "SECURITY SCANNING: Trivy (vulnerabilities, config, secrets), Grype (dependencies), Gitleaks (git history secrets), Hadolint (Dockerfile linting). Run 'mise run scan:all' to execute all security checks. See mise.toml for individual scan commands."
+
+"help:deployment" = "DEPLOYMENT OPTIONS: 1) Registry - docker pull ghcr.io/gsa-tts/<app>:v1.0 (pre-scanned), 2) Local Build - mise run container:build-all (full control). Before production, verify: mise run scan:all. See DEPLOYMENT.md for detailed guides."
+
+# ============================================================================
+# CI/CD HELPERS
+# ============================================================================
+
+"ci:pre-release-check" = """
+#!/bin/bash
+set -euo pipefail
+echo "========================================="
+echo "   PRE-RELEASE CHECKS"
+echo "========================================="
+echo ""
+
+echo "✓ Running security scans..."
+mise run scan:all
+echo ""
+
+echo "✓ Running linters..."
+mise run lint:all
+echo ""
+
+echo "========================================="
+echo "   PRE-RELEASE CHECKS PASSED"
+echo "========================================="
+"""
+
+# ============================================================================
+# Environment Configuration
+# ============================================================================
+
+[env]
+# Ensure consistent Docker buildkit features
+DOCKER_BUILDKIT = "1"
+COMPOSE_DOCKER_CLI_BUILD = "1"
+
+# Trivy options for CI/CD
+TRIVY_DB_REPOSITORY = "ghcr.io/aquasecurity/trivy-db"
+TRIVY_JAVA_DB_REPOSITORY = "ghcr.io/aquasecurity/trivy-java-db"
+
+# Gitleaks configuration
+GITLEAKS_CONFIG = ".gitleaks.toml"
+
+# Security scanning severity levels (HIGH,CRITICAL by default)
+SCAN_SEVERITY = "HIGH,CRITICAL"

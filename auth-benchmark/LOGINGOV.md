@@ -118,7 +118,7 @@ applications:
     disk_quota: 512M
     instances: 1
     docker:
-      image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0-alpine
+      image: example/image:placeholder
     routes:
       - route: auth-bench-oauth2-proxy.app.cloud.gov
     env:
@@ -127,7 +127,7 @@ applications:
       COOKIE_DOMAIN: auth-bench-oauth2-proxy.app.cloud.gov
       
       # Security Keys (Replace cookie_secret with a 32-byte base64 value)
-      OAUTH2_PROXY_COOKIE_SECRET: "replace-with-32-byte-base64-secret"
+      OAUTH2_PROXY_COOKIE_SECRET: "REPLACE_WITH_SECURE_RANDOM_VALUE"
       
       # Login.gov OIDC Parameters
       OAUTH2_PROXY_PROVIDER: "oidc"
