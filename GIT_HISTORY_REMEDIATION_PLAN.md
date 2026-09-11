@@ -53,6 +53,24 @@ Explicit approval is still required before either of these actions:
 - Installing history-rewrite tooling such as `git-filter-repo` or BFG.
 - Rewriting and force-pushing repository history after the dry run succeeds.
 
+## Disposable Dry-Run Result
+
+Dry-run date: 2026-09-11
+
+A disposable clone under `/tmp` was rewritten with Git's built-in `filter-branch` after extracting replacement values from a protected local Gitleaks JSON report. Raw scanner output and extracted values were stored only in a chmod-restricted temp directory, were never printed, and were deleted after the rewrite test.
+
+| Check | Result |
+|-------|--------|
+| Pre-rewrite history findings | 9 |
+| Unique values replaced | 5 |
+| Rewrite command exit code | 0 |
+| Commit count before rewrite | 53 |
+| Commit count after rewrite | 53 |
+| Post-rewrite full-history Gitleaks scan | Passed |
+| Raw temp files deleted | Yes |
+
+This result shows the current history findings can be removed in a disposable clone. It does not authorize rewriting or force-pushing the canonical repository.
+
 ## Recommended Path
 
 ### 1. Confirm Scope
