@@ -14,6 +14,26 @@ Current-file gates pass, including working-tree Gitleaks with `--no-git`. The re
 
 Do not make this repository public until the history findings are remediated or formally accepted through the security process.
 
+## Current Redacted Inventory
+
+Redacted scan date: 2026-09-11
+
+The current history scan reports 9 findings. All findings use the `generic-api-key` rule. The table below intentionally includes only remediation metadata and omits secret values, matched text, authors, emails, and line contents.
+
+| File | Start line | Rule ID | Commit prefix |
+|------|------------|---------|---------------|
+| `backstage/vars.yml` | 23 | `generic-api-key` | `cc704c1f5697` |
+| `openobserve/oauth2-proxy-manifest.yml` | 10 | `generic-api-key` | `496219d5709b` |
+| `backstage/manifest.yml` | 40 | `generic-api-key` | `cc704c1f5697` |
+| `auth-benchmark/pomerium/vars.yml` | 8 | `generic-api-key` | `632eb1b4a00d` |
+| `auth-benchmark/oauth2-proxy/vars.yml` | 5 | `generic-api-key` | `424464e05ef6` |
+| `auth-benchmark/pomerium/vars.yml` | 7 | `generic-api-key` | `424464e05ef6` |
+| `auth-benchmark/pomerium/vars.yml` | 8 | `generic-api-key` | `424464e05ef6` |
+| `auth-benchmark/oauth2-proxy/manifest.yml` | 7 | `generic-api-key` | `424464e05ef6` |
+| `auth-benchmark/LOGINGOV.md` | 121 | `generic-api-key` | `0d3840df603d` |
+
+Initial triage should classify each row as real credential, generated secret, placeholder, or scanner false positive. Treat unknowns as potentially exposed credentials until a security owner decides otherwise.
+
 ## Guardrails
 
 - Do not rewrite Git history without explicit owner approval.
@@ -49,6 +69,8 @@ Use one of these approaches:
 | Formal risk acceptance | Findings are confirmed non-sensitive placeholders | Must be documented and approved before public release |
 
 For this repository, start with `git filter-repo` unless the finding inventory shows a simpler BFG deletion/replacement path.
+
+Recommended next decision: choose either a history rewrite using `git filter-repo` after credential rotation, or a documented risk acceptance for rows confirmed to be non-sensitive placeholders or false positives.
 
 ### 4. Dry Run on a Disposable Clone
 
