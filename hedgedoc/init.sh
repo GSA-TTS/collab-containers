@@ -11,7 +11,8 @@ fi
 
 # Set a default session secret if not provided
 if [ -z "$CMD_SESSION_SECRET" ]; then
-  export CMD_SESSION_SECRET=$(openssl rand -base64 32)
+  CMD_SESSION_SECRET=$(openssl rand -base64 32)
+  export CMD_SESSION_SECRET
   echo "Session secret not set. Generated a random one."
 fi
 

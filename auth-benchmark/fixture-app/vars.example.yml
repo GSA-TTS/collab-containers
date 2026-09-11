@@ -1,3 +1,4 @@
+---
 app_name: auth-bench-fixture
 public_host: auth-bench-fixture.app.cloud.gov
 benchmark_name: auth-bench-fixture

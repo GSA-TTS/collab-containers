@@ -1,3 +1,4 @@
+---
 # OpenObserve with oauth2-proxy deployment variables
 # Copy this file to vars.yml and fill in the values
 
@@ -5,6 +6,7 @@
 # Use -staging suffix for staging deployments
 app_name: openobserve-staging
 proxy_name: openobserve-proxy-staging
+proxy_container_image: REPLACE_WITH_PINNED_PROXY_IMAGE
 
 # Routes
 # IMPORTANT: cookie_domain MUST match protected_host exactly
@@ -16,7 +18,7 @@ uaa_service_name: openobserve-uaa
 
 # oauth2-proxy cookie secret (32-byte base64-encoded)
 # Generate with: openssl rand -base64 32
-cookie_secret: replace-with-32-byte-base64-secret
+cookie_secret: REPLACE_WITH_SECURE_RANDOM_VALUE
 
 # Cookie and whitelist domains
 # IMPORTANT: cookie_domain MUST match protected_host exactly
@@ -30,4 +32,4 @@ uaa_scope: openid
 # These are also used for API Basic Auth access
 # IMPORTANT: Change these before deployment!
 zo_root_email: root@example.com
-zo_root_password: Complexpass#123
+zo_root_password: ((zo_root_password))

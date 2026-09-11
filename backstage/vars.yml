@@ -1,9 +1,11 @@
+---
 # Backstage with oauth2-proxy deployment variables
 # Production-ready configuration for cloud.gov
 
 # Application naming
 app_name: backstage-staging
 proxy_name: backstage-proxy-staging
+proxy_container_image: REPLACE_WITH_PINNED_PROXY_IMAGE
 
 # Routes
 protected_host: backstage-staging.app.cloud.gov
@@ -20,7 +22,7 @@ upstream_url: http://backstage-staging.apps.internal:8080
 
 # oauth2-proxy cookie secret (must be exactly 16, 24, or 32 bytes)
 # Generate with: openssl rand -hex 16
-cookie_secret: a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6
+cookie_secret: REPLACE_WITH_SECURE_RANDOM_VALUE
 
 # Cookie and whitelist domains
 cookie_domain: backstage-staging.app.cloud.gov

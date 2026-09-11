@@ -25,14 +25,14 @@ applications:
       ZITADEL_EXTERNALDOMAIN: ((external_domain))
       ZITADEL_EXTERNALPORT: "443"
       ZITADEL_EXTERNALSECURE: "true"
-      
+
       # Disable TLS (terminated at Gorouter)
       ZITADEL_TLS_ENABLED: "false"
       ZITADEL_PORT: "8080"
-      
+
       # Security - MUST be exactly 32 characters
       ZITADEL_MASTERKEY: ((masterkey))
-      
+
       # Database connection - hardcoded for distroless image
       ZITADEL_DATABASE_POSTGRES_HOST: ((postgres_host))
       ZITADEL_DATABASE_POSTGRES_PORT: "5432"
@@ -40,10 +40,10 @@ applications:
       ZITADEL_DATABASE_POSTGRES_USER_USERNAME: ((postgres_user))
       ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: ((postgres_password))
       ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: require
-      
+
       # First instance bootstrap
       ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORDCHANGEREQUIRED: "false"
-      
+
       # Logging
       ZITADEL_LOGSTORE_ACCESS_STDOUT_ENABLED: "true"
 
@@ -67,10 +67,10 @@ applications:
     env:
       # API connection (internal container-to-container)
       ZITADEL_API_URL: http://((internal_api_host)):8080
-      
+
       # Base path for Next.js
       NEXT_PUBLIC_BASE_PATH: /ui/v2/login
-      
+
       # Custom headers to pass to API
       CUSTOM_REQUEST_HEADERS: "Host:((external_domain)),X-Forwarded-Proto:https"
 

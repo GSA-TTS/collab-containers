@@ -1,5 +1,7 @@
+---
 app:
-  # The frontend baseUrl. Cloud.gov route is dynamically injected via BACKSTAGE_HOST env var.
+  # The frontend baseUrl. Cloud.gov route is dynamically injected via
+  # BACKSTAGE_HOST env var.
   baseUrl: https://${BACKSTAGE_HOST}
 
 backend:
@@ -22,11 +24,11 @@ backend:
       password: ${POSTGRES_PASSWORD}
       database: ${POSTGRES_DB}
       ssl:
-        rejectUnauthorized: false # Required for cloud.gov AWS RDS instances
+        rejectUnauthorized: false  # Required for cloud.gov AWS RDS instances
     # Ensure tables are created automatically
     ensureExists: true
 
-# Auth configurations supporting both OIDC (Direct Login.gov/Cloud.gov) and oauth2-proxy (Proxy Mode)
+# Auth configurations supporting both OIDC and oauth2-proxy.
 auth:
   environment: production
   providers:
@@ -46,7 +48,8 @@ auth:
     # -----------------------------------------------------------------
     # SCENARIO B: Direct OIDC (Login.gov or Cloud.gov UAA)
     # -----------------------------------------------------------------
-    # Configure backstage to perform a direct standard OIDC authorization code flow.
+    # Configure backstage to perform a direct standard OIDC authorization code
+    # flow.
     oidc:
       production:
         clientId: ${OIDC_CLIENT_ID}

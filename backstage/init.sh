@@ -6,21 +6,23 @@ echo "Starting Backstage Initialization on cloud.gov..."
 # 1. Dynamically discover database credentials
 if [ -n "$VCAP_SERVICES" ]; then
   echo "Parsing database credentials from VCAP_SERVICES..."
-  export POSTGRES_HOST=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.host || "");')
-  export POSTGRES_PORT=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.port || "5432");')
-  export POSTGRES_USER=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.username || "");')
-  export POSTGRES_PASSWORD=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.password || "");')
-  export POSTGRES_DB=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.db_name || "");')
+  POSTGRES_HOST=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.host || "");')
+  POSTGRES_PORT=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.port || "5432");')
+  POSTGRES_USER=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.username || "");')
+  POSTGRES_PASSWORD=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.password || "");')
+  POSTGRES_DB=$(node -e 'const services = JSON.parse(process.env.VCAP_SERVICES || "{}"); const creds = ((services["aws-rds"] || [])[0] || {}).credentials || {}; process.stdout.write(creds.db_name || "");')
+  export POSTGRES_HOST POSTGRES_PORT POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB
 fi
 
 # Fallback: Parse DATABASE_URL if available and VCAP_SERVICES didn't yield values
 if [ -z "$POSTGRES_HOST" ] && [ -n "$DATABASE_URL" ]; then
   echo "Parsing database credentials from DATABASE_URL..."
-  export POSTGRES_HOST=$(node -e 'const u = new URL(process.env.DATABASE_URL); process.stdout.write(u.hostname);')
-  export POSTGRES_PORT=$(node -e 'const u = new URL(process.env.DATABASE_URL); process.stdout.write(u.port || "5432");')
-  export POSTGRES_USER=$(node -e 'const u = new URL(process.env.DATABASE_URL); process.stdout.write(u.username);')
-  export POSTGRES_PASSWORD=$(node -e 'const u = new URL(process.env.DATABASE_URL); process.stdout.write(decodeURIComponent(u.password));')
-  export POSTGRES_DB=$(node -e 'const u = new URL(process.env.DATABASE_URL); process.stdout.write(u.pathname.substring(1));')
+  POSTGRES_HOST=$(node -e 'const u = new URL(process.env.DATABASE_URL); process.stdout.write(u.hostname);')
+  POSTGRES_PORT=$(node -e 'const u = new URL(process.env.DATABASE_URL); process.stdout.write(u.port || "5432");')
+  POSTGRES_USER=$(node -e 'const u = new URL(process.env.DATABASE_URL); process.stdout.write(u.username);')
+  POSTGRES_PASSWORD=$(node -e 'const u = new URL(process.env.DATABASE_URL); process.stdout.write(decodeURIComponent(u.password));')
+  POSTGRES_DB=$(node -e 'const u = new URL(process.env.DATABASE_URL); process.stdout.write(u.pathname.substring(1));')
+  export POSTGRES_HOST POSTGRES_PORT POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB
 fi
 
 if [ -z "$POSTGRES_HOST" ]; then
@@ -29,7 +31,8 @@ fi
 
 # 2. Dynamically determine the Backstage Host Name from cloud.gov environment
 if [ -z "$BACKSTAGE_HOST" ] && [ -n "$VCAP_APPLICATION" ]; then
-  export BACKSTAGE_HOST=$(node -e 'const app = JSON.parse(process.env.VCAP_APPLICATION || "{}"); process.stdout.write((app.application_uris || [])[0] || "");')
+  BACKSTAGE_HOST=$(node -e 'const app = JSON.parse(process.env.VCAP_APPLICATION || "{}"); process.stdout.write((app.application_uris || [])[0] || "");')
+  export BACKSTAGE_HOST
   echo "Automatically detected BACKSTAGE_HOST: ${BACKSTAGE_HOST}"
 fi
 

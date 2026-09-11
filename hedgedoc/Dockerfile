@@ -1,4 +1,4 @@
-FROM quay.io/hedgedoc/hedgedoc:latest
+FROM quay.io/hedgedoc/hedgedoc:1.10.3
 
 # Copy the init.sh script into the container
 COPY init.sh /app/init.sh

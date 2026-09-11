@@ -1,1 +1,19 @@
-openobserve/vars.yml
+# Local app configuration and secrets
+**/vars.yml
+!**/vars.example.yml
+.env
+.env.*
+!.env.example
+
+# Private keys and certificates
+*.key
+*.pem
+*.p12
+*.pfx
+cosign.key
+
+# Generated security scan artifacts
+sbom/
+trivy-*.sarif
+trivy-sbom-*.json
+*-docksec-report.*

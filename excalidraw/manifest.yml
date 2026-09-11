@@ -1,3 +1,4 @@
+---
 applications:
   - name: excalidraw
     memory: 512M

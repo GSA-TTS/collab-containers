@@ -1,3 +1,4 @@
+---
 applications:
   - name: ((app_name))
     memory: 256M
@@ -15,8 +16,8 @@ applications:
       AUTHENTICATE_HOST: ((authenticate_host))
       UPSTREAM_URL: ((upstream_url))
       COOKIE_DOMAIN: ((cookie_domain))
-      COOKIE_SECRET: ((cookie_secret))
-      SHARED_SECRET: ((shared_secret))
+      COOKIE_SECRET: REPLACE_WITH_SECURE_RANDOM_VALUE
+      SHARED_SECRET: REPLACE_WITH_SECURE_RANDOM_VALUE
     services:
       - name: ((uaa_service_name))
         parameters:
@@ -41,7 +42,6 @@ applications:
 
       if [ -z "$CLIENT_ID" ] || [ -z "$CLIENT_SECRET" ]; then
         echo "Error: Failed to parse UAA credentials from VCAP_SERVICES" >&2
-        echo "VCAP_SERVICES was: $VCAP_SERVICES" >&2
         exit 1
       fi
 
@@ -52,8 +52,8 @@ applications:
         "insecure_server: true" \
         "authenticate_service_url: https://${AUTHENTICATE_HOST}" \
         "cookie_domain: ${COOKIE_DOMAIN}" \
-        "cookie_secret: ${COOKIE_SECRET}" \
-        "shared_secret: ${SHARED_SECRET}" \
+        "cookie_secret: REPLACE_WITH_SECURE_RANDOM_VALUE \
+        "shared_secret: REPLACE_WITH_SECURE_RANDOM_VALUE \
         "idp_provider: oidc" \
         "idp_provider_url: ${ISSUER_URL}" \
         "idp_client_id: ${CLIENT_ID}" \

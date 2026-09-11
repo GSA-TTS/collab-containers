@@ -2,27 +2,28 @@
 # OpenObserve backend application (internal only, no public route)
 # Access is gated by oauth2-proxy via container-to-container networking
 applications:
-- name: ((app_name))
-  memory: 2G
-  disk_quota: 2G
-  instances: 1
-  buildpacks:
-    - binary_buildpack
-  routes:
-    # Internal route only - not publicly accessible
-    - route: ((internal_host))
-  env:
-    # Root user credentials for OpenObserve
-    ZO_ROOT_USER_EMAIL: ((zo_root_email))
-    ZO_ROOT_USER_PASSWORD: ((zo_root_password))
-    # Data directory
-    ZO_DATA_DIR: /home/vcap/app/data
-    # Listen on Cloud Foundry provided port
-    ZO_HTTP_PORT: "8080"
-    ZO_HTTP_ADDR: "0.0.0.0"
-  command: |
-    mkdir -p /home/vcap/app/data
-    curl -L -o openobserve.tar.gz https://downloads.openobserve.ai/releases/o2-enterprise/v0.90.3/openobserve-ee-v0.90.3-linux-amd64-musl.tar.gz
-    tar -xzf openobserve.tar.gz
-    chmod +x openobserve
-    ./openobserve
+  - name: ((app_name))
+    memory: 2G
+    disk_quota: 2G
+    instances: 1
+    buildpacks:
+      - binary_buildpack
+    routes:
+      # Internal route only - not publicly accessible
+      - route: ((internal_host))
+    env:
+      # Root user credentials for OpenObserve
+      ZO_ROOT_USER_EMAIL: ((zo_root_email))
+      ZO_ROOT_USER_PASSWORD: ((zo_root_password))
+      # Data directory
+      ZO_DATA_DIR: /home/vcap/app/data
+      # Listen on Cloud Foundry provided port
+      ZO_HTTP_PORT: "8080"
+      ZO_HTTP_ADDR: "0.0.0.0"
+    command: |
+      mkdir -p /home/vcap/app/data
+      curl -L -o openobserve.tar.gz \
+        https://downloads.openobserve.ai/releases/o2-enterprise/v0.90.3/openobserve-ee-v0.90.3-linux-amd64-musl.tar.gz
+      tar -xzf openobserve.tar.gz
+      chmod +x openobserve
+      ./openobserve

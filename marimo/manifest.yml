@@ -1,23 +1,24 @@
-#status: 200 working
+---
+# status: 200 working
 ---
 applications:
-- name: marimo-app
-  memory: 2G
-  disk_quota: 2G
-  instances: 1
-  docker:
-    image: ghcr.io/marimo-team/marimo:latest-sql
-  routes:
-  - route: marimo.app.cloud.gov
-  env:
-    # Basic configuration
-    MARIMO_ADMIN_USER: admin
-    MARIMO_ADMIN_PASSWORD: your-super-secret-and-long-password-to-replace
-    MARIMO_TRUSTED_DOMAINS: marimo.app.cloud.gov
-    MARIMO_OVERWRITEHOST: marimo.app.cloud.gov
-    MARIMO_OVERWRITEPROTOCOL: https
-  volume_mounts:
-  - path: /data
-    volume: marimo-data
-  - path: /etc/marimo/marimo.toml
-    volume: marimo-config
+  - name: marimo-app
+    memory: 2G
+    disk_quota: 2G
+    instances: 1
+    docker:
+      image: ghcr.io/marimo-team/marimo:latest-sql
+    routes:
+      - route: marimo.app.cloud.gov
+    env:
+      # Basic configuration
+      MARIMO_ADMIN_USER: admin
+      MARIMO_ADMIN_PASSWORD: ((admin_password))
+      MARIMO_TRUSTED_DOMAINS: marimo.app.cloud.gov
+      MARIMO_OVERWRITEHOST: marimo.app.cloud.gov
+      MARIMO_OVERWRITEPROTOCOL: https
+    volume_mounts:
+      - path: /data
+        volume: marimo-data
+      - path: /etc/marimo/marimo.toml
+        volume: marimo-config

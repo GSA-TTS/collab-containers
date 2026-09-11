@@ -1,0 +1,116 @@
+---
+title: "Git History Remediation Plan"
+description: "Non-destructive plan for resolving redacted Gitleaks findings before public release"
+status: draft
+tier: 2
+last_updated: "2026-09-11"
+---
+
+# Git History Remediation Plan
+
+## Status
+
+Current-file gates pass, including working-tree Gitleaks with `--no-git`. The remaining public-release blocker is the full Git history Gitleaks scan, which reports redacted historical findings.
+
+Do not make this repository public until the history findings are remediated or formally accepted through the security process.
+
+## Guardrails
+
+- Do not rewrite Git history without explicit owner approval.
+- Do not publish, paste, or preserve secret values from scanner output.
+- Rotate any value that may have been real before or immediately after history remediation.
+- Coordinate force-push timing with all active contributors.
+- Preserve a private backup before any destructive history rewrite.
+
+## Recommended Path
+
+### 1. Confirm Scope
+
+Run a redacted history scan and record only metadata needed for remediation:
+
+```bash
+mise run scan:secrets
+```
+
+Capture only file paths, commit SHAs, rule IDs, and whether the value is believed to be real or placeholder/test data. Do not copy raw secret values into tickets, docs, chat, or commit messages.
+
+### 2. Rotate Potentially Exposed Values
+
+For every finding that may correspond to a real credential, rotate or revoke it before publishing the repository. Rotation should happen even if the history rewrite is planned, because the value has already existed in Git history.
+
+### 3. Choose Remediation Method
+
+Use one of these approaches:
+
+| Option | Use When | Notes |
+|--------|----------|-------|
+| `git filter-repo` | Precise file/path/string cleanup is needed | Preferred modern replacement for `filter-branch` |
+| BFG Repo-Cleaner | Findings are broad and pattern-based | Simpler for deleting known files or replacing known text |
+| Formal risk acceptance | Findings are confirmed non-sensitive placeholders | Must be documented and approved before public release |
+
+For this repository, start with `git filter-repo` unless the finding inventory shows a simpler BFG deletion/replacement path.
+
+### 4. Dry Run on a Disposable Clone
+
+Create a local disposable clone and test the rewrite there first:
+
+```bash
+git clone --mirror <private-repo-url> collab-containers-remediation.git
+cd collab-containers-remediation.git
+```
+
+Apply the selected rewrite only in the disposable clone. Afterward, run:
+
+```bash
+gitleaks detect --source . --redact --verbose
+```
+
+The dry run is acceptable only when the redacted history scan passes or when any remaining findings have a documented approval decision.
+
+### 5. Verify Functional State
+
+After producing a remediated branch or mirror, check out a working copy and run:
+
+```bash
+mise install
+mise run lint:all
+mise run scan:dockerfile
+mise exec -- gitleaks detect --source . --no-git --redact --verbose
+mise run scan:trivy-fs
+git diff --check
+mise run scan:all
+```
+
+`mise run scan:all` should pass after successful history remediation.
+
+### 6. Coordinate the Rewrite
+
+Before pushing rewritten history:
+
+- Announce a repository freeze window.
+- Confirm no release tags or protected branches will be unexpectedly overwritten.
+- Back up the original private repository state.
+- Document contributor recovery steps, including reclone guidance.
+- Confirm branch protection and CI settings are ready after the push.
+
+### 7. Push and Re-Verify
+
+Only after explicit approval, push the rewritten history and rerun the public-readiness gate suite in CI and locally.
+
+## Acceptance Criteria
+
+- Current-tree Gitleaks scan passes.
+- Full-history Gitleaks scan passes, or each remaining finding has documented risk acceptance.
+- Any potentially real exposed credentials are rotated or revoked.
+- Lint, Dockerfile lint, Trivy filesystem scan, and whitespace checks pass.
+- Release workflows complete successfully on the remediated history.
+- Public readiness checklist is updated with verification evidence.
+
+## Rollback Plan
+
+If a rewrite causes unexpected loss or build failures:
+
+1. Keep the repository private.
+2. Stop further force-pushes.
+3. Restore from the private backup or original remote refs.
+4. Re-run the redacted scan and refine the remediation inventory.

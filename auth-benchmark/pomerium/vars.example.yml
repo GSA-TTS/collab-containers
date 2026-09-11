@@ -1,8 +1,9 @@
+---
 app_name: auth-bench-pomerium
 protected_host: auth-bench-pomerium.app.cloud.gov
 authenticate_host: auth-bench-pomerium-auth.app.cloud.gov
 uaa_service_name: auth-bench-pomerium-uaa
 upstream_url: https://auth-bench-fixture.app.cloud.gov
 cookie_domain: auth-bench-pomerium.app.cloud.gov
-cookie_secret: replace-with-32-byte-base64-secret
-shared_secret: replace-with-32-byte-base64-secret
+cookie_secret: REPLACE_WITH_SECURE_RANDOM_VALUE
+shared_secret: REPLACE_WITH_SECURE_RANDOM_VALUE

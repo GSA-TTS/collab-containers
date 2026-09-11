@@ -1,3 +1,4 @@
+---
 app_name: auth-bench-fixture-pomerium-staging
 public_host: auth-bench-fixture-pomerium-staging.app.cloud.gov
 benchmark_name: auth-bench-fixture-pomerium-staging
