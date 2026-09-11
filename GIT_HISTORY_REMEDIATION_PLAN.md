@@ -10,9 +10,9 @@ last_updated: "2026-09-11"
 
 ## Status
 
-Current-file gates pass, including working-tree Gitleaks with `--no-git`. The remaining public-release blocker is the full Git history Gitleaks scan, which reports redacted historical findings.
+Current-file gates pass, including working-tree Gitleaks with `--no-git`. The historical findings listed below were reviewed and confirmed harmless on 2026-09-11, then accepted using targeted `.gitleaksignore` fingerprints.
 
-Do not make this repository public until the history findings are remediated or formally accepted through the security process.
+Do not broaden the Gitleaks allowlist without a new review. If new history findings appear, treat them as release blockers until remediated or formally accepted through the security process.
 
 ## Current Redacted Inventory
 
@@ -33,6 +33,8 @@ The current history scan reports 9 findings. All findings use the `generic-api-k
 | `auth-benchmark/LOGINGOV.md` | 121 | `generic-api-key` | `0d3840df603d` |
 
 Initial triage should classify each row as real credential, generated secret, placeholder, or scanner false positive. Treat unknowns as potentially exposed credentials until a security owner decides otherwise.
+
+Review outcome: these rows were confirmed harmless by the repository owner on 2026-09-11 and accepted with exact Gitleaks fingerprints in `.gitleaksignore`. This avoids rewriting repository history while keeping future unrelated findings visible.
 
 ## Guardrails
 
