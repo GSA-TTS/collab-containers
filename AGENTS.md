@@ -722,6 +722,48 @@ Before completing any task:
 - [ ] No credentials in any file
 - [ ] NIST controls cited where applicable
 
+### cloud.gov Networking Prerequisite (Required Before Any Deployment)
+
+Before deploying or debugging any app that talks to a bound backend service
+(RDS, Elasticsearch, Redis, an internal API, etc.) on cloud.gov, the agent
+MUST verify the **space's security group bindings** first. A missing or
+incomplete `trusted_local_networks_egress` binding on the `running` lifecycle
+is a common root cause of "frontend cannot connect to backend service"
+failures that looks like an application/credentials bug but is actually a
+network policy gap.
+
+Symptoms that indicate this is a networking issue, not an app bug:
+- `ECONNREFUSED` to an internal `10.x` address (RDS, internal services) while
+  credentials/`VCAP_SERVICES` look correct
+- The app repeatedly crash-loops immediately after "Database cannot be
+  reached" or an equivalent backend-connection retry/timeout message
+- The same app/manifest works in one space (e.g., `dev`) but fails in another
+  (e.g., `staging`) with identical code and bound service credentials
+
+Required check before deploying or troubleshooting connectivity:
+
+```bash
+cf target -o ORG -s SPACE
+cf security-groups
+```
+
+Confirm `trusted_local_networks_egress` (or the org's equivalent internal-network
+security group) is bound to the target space for the `running` lifecycle —
+not just `staging` lifecycle, and not just bound in a different space of the
+same org. Compare against a known-working space in the same org if unsure.
+
+If the binding is missing:
+- Binding a **running security group** to a space is an infrastructure/network
+  policy change and requires explicit human approval per §3.2 and the
+  Infrastructure risk mode in §14.6 — do not bind it unilaterally.
+- Prefer redeploying to a space that already has the correct binding when
+  that satisfies the task, since it has a smaller blast radius than changing
+  space-wide network policy.
+- If binding the security group is approved, note that `cf bind-running-security-group`
+  applies org/space-manager privileges the agent's account must actually hold —
+  an `authorized` failure means the change must be made by someone with
+  sufficient cloud.gov role, not retried repeatedly.
+
 ## Docker Sandboxes Overview
 
 [Docker Sandboxes](https://docs.docker.com/ai/sandboxes/) runs AI coding agents in isolated microVM environments.

@@ -1,6 +1,8 @@
 # Agentic Coding Quickstart - Makefile
 # Simple commands for setting up and managing your AI-assisted development workspace
 
+SHELL := bash
+
 .PHONY: setup doctor new-project clean install-hooks help init-project run-agent
 
 # Default target

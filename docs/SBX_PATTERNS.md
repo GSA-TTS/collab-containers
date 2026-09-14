@@ -79,7 +79,7 @@ Or for one-off testing:
 export USAI_API_KEY="your-key-here"
 
 # Inject into sandbox
-sbx exec -it -e USAI_API_KEY="$USAI_API_KEY" -w $(pwd) SANDBOX_NAME opencode
+sbx exec -it -e USAI_API_KEY="$USAI_API_KEY" -w "$PWD" SANDBOX_NAME opencode
 ```
 
 ---
@@ -107,7 +107,7 @@ sbx run SANDBOX_NAME
 sbx exec -it \
   -e USAI_API_KEY="$USAI_API_KEY" \
   -e GH_TOKEN="$(gh auth token)" \
-  -w $(pwd) SANDBOX_NAME opencode
+  -w "$PWD" SANDBOX_NAME opencode
 ```
 
 ### Verify GitHub Access
@@ -143,7 +143,7 @@ sbx rm SANDBOX_NAME 2>/dev/null; sbx create --name SANDBOX_NAME opencode .
 ```bash
 sbx exec -it \
   -e GITLAB_TOKEN="your-gitlab-token" \
-  -w $(pwd) SANDBOX_NAME opencode
+  -w "$PWD" SANDBOX_NAME opencode
 ```
 
 #### Self-Hosted GitLab (e.g., workshop.cloud.gov)
@@ -152,7 +152,7 @@ sbx exec -it \
 sbx exec -it \
   -e GITLAB_TOKEN="$(glab config get --host workshop.cloud.gov token)" \
   -e GITLAB_HOST="workshop.cloud.gov" \
-  -w $(pwd) SANDBOX_NAME opencode
+  -w "$PWD" SANDBOX_NAME opencode
 ```
 
 ### Verify GitLab Access
