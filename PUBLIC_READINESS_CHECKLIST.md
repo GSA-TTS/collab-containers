@@ -25,14 +25,15 @@ This checklist ensures the collab-containers repository meets security, complian
   mise run scan:trivy-container <image-name>
   ```
 
-- [ ] No CRITICAL vulnerabilities in Trivy results
+- [ ] Every HIGH/CRITICAL Trivy finding is either fixed or recorded in
+  `docs/IMAGE-VULNERABILITY-REGISTER.md` with an owner decision (findings are non-blocking by policy)
   ```bash
-  # Verify: trivy-results-*.sarif shows no CRITICAL
+  # Verify: trivy-findings-*.txt and the job summary were reviewed against the register
   ```
 
 - [ ] All images scanned with DockSec
   - [ ] Review `docksec-report.html` for all images
-  - [ ] Address critical findings before release
+  - [ ] Record unresolved findings in `docs/IMAGE-VULNERABILITY-REGISTER.md` (non-blocking by policy)
 
 - [ ] SBOMs generated for all images
   - [ ] SPDX format: `sbom-*-spdx.json`

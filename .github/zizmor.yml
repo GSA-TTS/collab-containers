@@ -5,5 +5,5 @@ rules:
     ignore:
       # DockSec is a git submodule used as a local composite/docker action. The
       # suggested "$/..." syntax is not verified on our runners; "./DockSec" is.
-      - container-scan-on-pr.yml:110
-      - publish-containers.yml:156
+      - container-scan-on-pr.yml:143
+      - publish-containers.yml:199
