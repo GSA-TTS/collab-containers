@@ -47,7 +47,7 @@ mise run scan:all              # Run all security checks
 | [Marimo](https://github.com/marimo-team/marimo)      | ✅ Working | ✅ Yes (oauth2-proxy) |                      | [marimo](./marimo/) |
 | [openvscode-server](https://github.com/gitpod-io/openvscode-server)  | ✅ Working | ✅ Yes (oauth2-proxy) |                      | [openVScode](./openVScode/) |
 | [Excalidraw](https://github.com/excalidraw/excalidraw)  | ✅ Working | ✅ Yes (oauth2-proxy) |                      | [excalidraw](./excalidraw/) |
-| [HedgeDoc](https://github.com/hedgedoc/hedgedoc)    | ✅ Working | ✅ Yes (oauth2-proxy) |                      | [hedgedoc](./hedgedoc/) |
+| [HedgeDoc](https://github.com/hedgedoc/hedgedoc)    | ✅ Working | 🚫 Not used (direct UAA OAuth2) |                      | [hedgedoc](./hedgedoc/) |
 | [Outline](https://github.com/outline/outline)     | ❌ Failing | 🚫 Required (oauth2-proxy) | GSA WAF blocks `/api/auth.config` with a 403 (dot-config block rule). | [outline](./outline/) |
 | [Planka](https://github.com/plankanban/planka)      | ❌ Failing | 🚫 Required (oauth2-proxy) | Database resolved, but Cloud.gov SAML split-domain session cookie is stripped by browser (SameSite block). | [planka](./planka/) |
 | [CryptPad](https://github.com/xwiki-labs/cryptpad)    | ✅ Working | ✅ Yes (oauth2-proxy) |                      | [cryptpad](./cryptpad/) |
