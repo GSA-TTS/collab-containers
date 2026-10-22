@@ -26,7 +26,7 @@ mise run ci:pre-release-check
 
 - At least one authorized maintainer must approve the pull request.
 - Required GitHub checks must pass.
-- New or changed container images must have their Trivy and DockSec findings reviewed.
+- New or changed container images must have their Trivy findings reviewed and recorded in `docs/IMAGE-VULNERABILITY-REGISTER.md`.
 - Contributors must update relevant deployment or security documentation with code changes.
 
 ## Release Tags

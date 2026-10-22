@@ -19,7 +19,6 @@ This guide walks through the complete process of preparing collab-containers for
 
 2. **Comprehensive Security Scanning**
    - Trivy: Container vulnerability, configuration, secret scanning
-   - DockSec: Detailed security analysis and recommendations
    - Gitleaks: Git history secret detection
    - Grype: Dependency vulnerability analysis
    - Hadolint: Dockerfile best practices linting
@@ -53,7 +52,7 @@ docker run -it ghcr.io/gsa-tts/hedgedoc:v1.0.0
 ```
 
 **Time required:** < 2 minutes
-**Security:** Use only after reviewing the release's Trivy, DockSec, and SBOM artifacts.
+**Security:** Use only after reviewing the release's Trivy and SBOM artifacts.
 
 ### For Developers (Build Locally)
 
@@ -153,13 +152,11 @@ Every container is scanned automatically:
 
 1. **On Pull Request** → `container-scan-on-pr.yml`
    - Trivy vulnerability scan (SARIF format)
-   - DockSec analysis
    - Results in artifacts and GitHub Security tab
 
 2. **On Release** → `publish-containers.yml`
    - Trivy scan with SARIF
    - SBOM generation (SPDX + CycloneDX)
-   - DockSec analysis
    - Reports attached to GitHub Release
 
 ### Manual Local Scanning
@@ -175,7 +172,6 @@ mise run scan:trivy-container <img> # Image scan
 ### Understanding Results
 
 - **Trivy SARIF** — Vulnerability report (upload to GitHub)
-- **DockSec report** — Comprehensive security analysis
 - **SBOM files** — All dependencies and versions (transparency)
 - **Gitleaks** — Secret detection (should show "No secrets found")
 - **Hadolint** — Dockerfile best practices
@@ -203,7 +199,6 @@ Before deploying to production, verify:
 ✅ **Security**
 - [ ] Trivy scan shows no CRITICAL vulnerabilities
 - [ ] SBOM reviewed for risky dependencies
-- [ ] DockSec report reviewed
 - [ ] No hardcoded secrets or credentials
 
 ✅ **Operations**
@@ -411,7 +406,7 @@ curl https://mise.jdx.dev/install.sh | sh
 **collab-containers** now has a public-release preparation framework with:
 
 ✅ Two deployment options (GHCR registry vs local build)
-✅ Security scanning tools (Trivy, DockSec, Gitleaks, Grype)
+✅ Security scanning tools (Trivy, Gitleaks, Grype)
 ✅ Software Bill of Materials (SPDX + CycloneDX)
 ✅ Federal compliance references (NIST aligned)
 ✅ Automated CI/CD pipeline drafts (GitHub Actions)

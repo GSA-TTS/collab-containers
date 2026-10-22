@@ -36,7 +36,7 @@ docker run -it --rm -p 3000:3000 ghcr.io/gsa-tts/<app-name>:latest
 ```
 
 **Advantages:**
-- ✅ Pre-scanned and verified (Trivy + DockSec)
+- ✅ Pre-scanned and verified (Trivy)
 - ✅ No local build required
 - ✅ Minimal supply chain risk
 - ✅ Reproducible: image hash matches published version
@@ -86,7 +86,6 @@ docker build -t local/hedgedoc:latest ./hedgedoc
    - Download and review:
      - `trivy-vulnerability-scan.sarif`
      - `sbom-spdx.json`
-     - `docksec-report.html` or `docksec-report.json`
 
 3. **Deploy to cloud.gov**
    ```bash
@@ -225,13 +224,7 @@ Every image undergoes scanning at release time:
    - Configuration best practices
    - Secret detection
 
-2. **DockSec** — Comprehensive security analysis
-   - Dockerfile best practices
-   - Runtime security configuration
-   - Layer analysis
-   - Supply chain assessment
-
-3. **Gitleaks** — Git history secret detection
+2. **Gitleaks** — Git history secret detection
    - Prevents secrets in source code
    - Pre-commit hook integration
 
@@ -272,12 +265,6 @@ SARIF files can be uploaded to GitHub or analyzed with SARIF viewers:
 # Or convert to human-readable format
 trivy image ghcr.io/gsa-tts/hedgedoc:v1.0.0 --format json | jq '.Results[] | select(.Severity=="CRITICAL")'
 ```
-
-#### DockSec Report
-
-- **HTML Report** — Visual analysis with recommendations
-- **JSON Report** — Machine-readable findings
-- **CSV Report** — Spreadsheet-compatible results
 
 #### SBOM Files
 
@@ -416,9 +403,7 @@ Before deploying to production, verify:
   syft ghcr.io/gsa-tts/hedgedoc:v1.0.0 | grep -E "(GPL|AGPL)"
   ```
 
-- [ ] **DockSec report reviewed** — No critical findings
-  - Check `docksec-report.html` or `docksec-report.json`
-  - Resolve any security recommendations
+- [ ] **Image vulnerability register reviewed** — `docs/IMAGE-VULNERABILITY-REGISTER.md`
 
 - [ ] **No secrets in code** — Gitleaks scan passed
   ```bash

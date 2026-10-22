@@ -51,7 +51,6 @@ We follow **coordinated disclosure** principles:
 Every container image is automatically scanned:
 
 - **Trivy** — Vulnerability, configuration, and secret scanning
-- **DockSec** — Comprehensive security analysis
 - **Gitleaks** — Secret detection in git history
 - **Grype** — Dependency vulnerability analysis
 
@@ -70,8 +69,6 @@ Scans run:
    - `trivy-vulnerability-scan.sarif` — Trivy results
    - `sbom-spdx.json` — SPDX Software Bill of Materials
    - `sbom-cyclonedx.json` — CycloneDX SBOM
-   - `docksec-report.html` — DockSec visual report
-   - `docksec-report.json` — DockSec machine-readable
 
 #### GitHub Security Tab
 
@@ -111,7 +108,7 @@ Production images should be hardened using:
 - Security updates applied during rebuilds
 - Secrets supplied through runtime configuration or service bindings
 
-Current image hardening status is tracked by Trivy, DockSec, and Hadolint results. Do not treat an image as production-hardened until those findings are reviewed and resolved or formally accepted.
+Current image hardening status is tracked by Trivy and Hadolint results, and by `docs/IMAGE-VULNERABILITY-REGISTER.md`. Do not treat an image as production-hardened until those findings are reviewed and resolved or formally accepted.
 
 ### Dependency Management
 
@@ -176,7 +173,7 @@ All changes require:
 
 Every pull request runs:
 
-1. **Container Scan** — Trivy + DockSec
+1. **Container Scan** — Trivy
 2. **Secret Scan** — Gitleaks
 3. **Dependency Lint** — Renovate advisory
 4. **Dockerfile Lint** — Hadolint

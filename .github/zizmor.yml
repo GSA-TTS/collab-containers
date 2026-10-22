@@ -1,9 +1,0 @@
----
-# zizmor configuration. Keep ignores narrow and justified.
-rules:
-  self-repository:
-    ignore:
-      # DockSec is a git submodule used as a local composite/docker action. The
-      # suggested "$/..." syntax is not verified on our runners; "./DockSec" is.
-      - container-scan-on-pr.yml:143
-      - publish-containers.yml:199

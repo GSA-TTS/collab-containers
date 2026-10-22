@@ -31,8 +31,6 @@ This checklist ensures the collab-containers repository meets security, complian
   # Verify: trivy-findings-*.txt and the job summary were reviewed against the register
   ```
 
-- [ ] All images scanned with DockSec
-  - [ ] Review `docksec-report.html` for all images
   - [ ] Record unresolved findings in `docs/IMAGE-VULNERABILITY-REGISTER.md` (non-blocking by policy)
 
 - [ ] SBOMs generated for all images
@@ -191,7 +189,6 @@ This checklist ensures the collab-containers repository meets security, complian
 
 - [ ] Release artifacts are attached
   - [ ] Trivy SARIF report attached
-  - [ ] DockSec reports (JSON, HTML, CSV) attached
   - [ ] SBOM files (SPDX, CycloneDX) attached
 
 ---
@@ -277,7 +274,7 @@ This checklist ensures the collab-containers repository meets security, complian
 
 - [ ] Security scanning in place (aligns with NIST SP 800-53)
   - [ ] Vulnerability scanning: Trivy ✓
-  - [ ] Configuration scanning: DockSec ✓
+  - [ ] Configuration scanning: Trivy (misconfig) and Hadolint ✓
   - [ ] Secret scanning: Gitleaks ✓
   - [ ] Dependency scanning: Grype ✓
 
@@ -441,7 +438,6 @@ This checklist ensures the collab-containers repository meets security, complian
 
 - [ ] Security scanning explained
   - [ ] What Trivy scans for
-  - [ ] What DockSec checks
   - [ ] How to interpret results
   - [ ] How to address findings
 

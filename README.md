@@ -108,13 +108,12 @@ Use [auth-benchmark](./auth-benchmark/) to compare UAA-backed auth proxies in fr
 
 ## Container Publishing and Findings
 
-This repository includes GitHub Actions workflows to discover every top-level `Dockerfile`, build each container image, scan it with DockSec, and publish it to `ghcr.io`.
+This repository includes GitHub Actions workflows to discover every top-level `Dockerfile`, build each container image, scan it with Trivy, and publish it to `ghcr.io`.
 
 - `publish-containers.yml` runs on published GitHub releases or manual dispatch.
 - Each discovered container is pushed to `ghcr.io/<owner>/<container>:<version>` and `:latest`.
-- DockSec runs in `scan_only` mode by default, so it does not require an LLM API key.
-- DockSec findings are saved as workflow artifacts and attached to each per-container release as JSON, HTML, and CSV reports.
-- The workflow creates a GitHub Release per container, using tags like `<container>-v1.2.3`, and attaches the DockSec reports.
+- Trivy findings are saved as workflow artifacts and attached to each per-container release as a SARIF report, with SPDX and CycloneDX SBOMs.
+- The workflow creates a GitHub Release per container, using tags like `<container>-v1.2.3`, and attaches the Trivy and SBOM reports.
 
 ### How to use it
 
@@ -130,7 +129,6 @@ This repository includes automated GitHub Actions workflows that:
 2. **Build** each container image
 3. **Scan** with multiple tools:
    - **Trivy** — Vulnerability, configuration, and secret scanning (SARIF)
-   - **DockSec** — Comprehensive security analysis (JSON/HTML/CSV)
 4. **Generate** Software Bill of Materials (SBOM)
    - SPDX format (industry standard)
    - CycloneDX format (OWASP standard)
@@ -150,18 +148,12 @@ This repository includes automated GitHub Actions workflows that:
 - Two formats for different compliance needs
 - Transparency for software supply chain
 
-**DockSec Analysis:**
-- Dockerfile best practices
-- Runtime security configuration
-- Layer efficiency analysis
-
 ### Using Published Images
 
 1. **Navigate to [Releases](https://github.com/GSA-TTS/collab-containers/releases)**
 2. **Download security reports:**
    - `trivy-vulnerability-scan.sarif`
    - `sbom-spdx.json` / `sbom-cyclonedx.json`
-   - `docksec-report.html` or `.json`
 3. **Review findings** before production deployment
 4. **Deploy after reviewing reports** using `docker pull ghcr.io/gsa-tts/<app>:<version>`
 
@@ -176,7 +168,7 @@ This repository includes automated GitHub Actions workflows that:
 
 - **Container Scan on PR** (`container-scan-on-pr.yml`)
   - Runs on Dockerfile/init.sh changes
-  - Trivy + DockSec scans
+  - Trivy scans
   - Reports in artifacts and GitHub Security tab
 
 - **Publish on Release** (`publish-containers.yml`)
@@ -254,7 +246,6 @@ docker run -it hedgedoc:local
 ### Scanning Tools
 
 - **Trivy** — Container vulnerability and secret scanning
-- **DockSec** — Comprehensive security analysis
 - **Gitleaks** — Git history secret detection
 - **Grype** — Dependency vulnerability analysis
 - **Hadolint** — Dockerfile best practices linting
