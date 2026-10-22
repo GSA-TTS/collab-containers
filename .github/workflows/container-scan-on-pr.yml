@@ -14,16 +14,17 @@ on:
 
 permissions:
   contents: read
-  security-events: write  # Required for SARIF upload
 
 jobs:
   discover:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       matrix: ${{ steps.discover.outputs.matrix }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
           submodules: recursive
@@ -49,21 +50,25 @@ jobs:
     needs: discover
     if: ${{ fromJson(needs.discover.outputs.matrix).include[0] != null }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read  # Required by upload-sarif on private repositories
+      security-events: write  # Required for SARIF upload
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
           submodules: recursive
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Build local image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
@@ -71,7 +76,7 @@ jobs:
           tags: local/${{ matrix.image }}:pr-${{ github.event.pull_request.number }}
 
       - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           image-ref: local/${{ matrix.image }}:pr-${{ github.event.pull_request.number }}
           format: 'sarif'
@@ -81,14 +86,17 @@ jobs:
 
       # Upload the full SARIF report before failing the required security gate.
       - name: Upload Trivy SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@4bfa242aa49c5f7c6770b98670d354a7dfac05f8 # v3
         if: always()
+        # Needs GitHub Code Security (private repos) or a public repository. The
+        # report is also kept as a workflow artifact, and the Trivy gate below still enforces.
+        continue-on-error: true
         with:
           sarif_file: trivy-results-${{ matrix.image }}.sarif
           category: trivy-pr-${{ matrix.image }}
 
       - name: Enforce Trivy vulnerability threshold
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           image-ref: local/${{ matrix.image }}:pr-${{ github.event.pull_request.number }}
           format: 'table'
@@ -106,7 +114,7 @@ jobs:
           scan_only: "true"
 
       - name: Upload DockSec artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: pr-${{ matrix.image }}-security-scan
           path: |

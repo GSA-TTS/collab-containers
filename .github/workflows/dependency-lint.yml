@@ -7,6 +7,8 @@ on:
 
 jobs:
   lint:
-    uses: GSA-TTS/scanning-service/.github/workflows/dependency-lint.yml@main
+    permissions:
+      contents: read
+    uses: GSA-TTS/scanning-service/.github/workflows/dependency-lint.yml@babb407b7461de0819af0a626f3fd43f9f6ae9e4 # main
     with:
       fail-on-error: true

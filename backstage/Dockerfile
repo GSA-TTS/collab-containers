@@ -1,7 +1,7 @@
 # =================================================================
 # STAGE 1: Build the Backstage Application (using full bookworm to build native packages)
 # =================================================================
-FROM node:20-bookworm AS build
+FROM node:22-bookworm AS build
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -22,10 +22,11 @@ RUN git config --global user.email "cloud-gov-deploy@gsa.gov" && \
 
 # Bootstrap standard Backstage app non-interactively
 # We select PostgreSQL as the default database for production cloud.gov RDS
-RUN printf "backstage-app\nPostgreSQL\n" | npx @backstage/create-app@latest --skip-install && \
-    mv backstage-app/* . && \
-    mv backstage-app/.* . 2>/dev/null || true && \
-    rm -rf backstage-app
+# create-app is pinned for reproducible builds; bump deliberately.
+RUN printf "backstage-app\nPostgreSQL\n" | npx --yes @backstage/create-app@0.9.3 --skip-install && \
+    cp -a backstage-app/. . && \
+    rm -rf backstage-app && \
+    test -f package.json
 
 # Copy our cloud.gov-optimized configuration
 COPY app-config.production.yaml /app/app-config.production.yaml
@@ -43,7 +44,7 @@ RUN mkdir -p packages/backend/dist/skeleton packages/backend/dist/bundle \
 # =================================================================
 # STAGE 2: Lightweight Production Runner
 # =================================================================
-FROM node:20-bookworm-slim AS runner
+FROM node:22-bookworm-slim AS runner
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
