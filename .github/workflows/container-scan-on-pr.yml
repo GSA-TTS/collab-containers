@@ -34,23 +34,14 @@ jobs:
         run: |
           set -euo pipefail
 
-          matrix_json="$({
-            shopt -s nullglob
-            found=0
-            printf '{"include":['
-            for dockerfile in */Dockerfile; do
-              found=1
-              context_dir="${dockerfile%/Dockerfile}"
-              image_name="$(printf '%s' "$context_dir" | tr '[:upper:]' '[:lower:]')"
-              printf '{"context":"%s","dockerfile":"%s","image":"%s"},' \
-                "$context_dir" "$dockerfile" "$image_name"
-            done
-            if [[ "$found" -eq 0 ]]; then
-              printf ']}'
-            else
-              printf '\b]}'
-            fi
-          })"
+          shopt -s nullglob
+          matrix_json='{"include":[]}'
+          for dockerfile in */Dockerfile; do
+            context_dir="${dockerfile%/Dockerfile}"
+            image_name="$(printf '%s' "$context_dir" | tr '[:upper:]' '[:lower:]')"
+            matrix_json="$(jq -c --arg context "$context_dir" --arg dockerfile "$dockerfile" --arg image "$image_name" \
+              '.include += [{context: $context, dockerfile: $dockerfile, image: $image}]' <<< "$matrix_json")"
+          done
 
           echo "matrix=$matrix_json" >> "$GITHUB_OUTPUT"
 
@@ -88,12 +79,22 @@ jobs:
           severity: 'HIGH,CRITICAL'
           scanners: 'vuln,config,secret'
 
+      # Upload the full SARIF report before failing the required security gate.
       - name: Upload Trivy SARIF to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
           sarif_file: trivy-results-${{ matrix.image }}.sarif
           category: trivy-pr-${{ matrix.image }}
+
+      - name: Enforce Trivy vulnerability threshold
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: local/${{ matrix.image }}:pr-${{ github.event.pull_request.number }}
+          format: 'table'
+          severity: 'HIGH,CRITICAL'
+          scanners: 'vuln,config,secret'
+          exit-code: '1'
 
       - name: Run DockSec scan-only analysis
         env:

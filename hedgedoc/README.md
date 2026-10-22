@@ -4,7 +4,7 @@
 
 ## Current status
 
-- **Deployed in:** org `gsa-tts-iae-lava-beds`, space `dev`
+- **Deployed in:** org `<your-org>`, space `dev`
 - **Route:** `https://hedgedoc.app.cloud.gov`
 - **Auth:** direct OAuth2 against cloud.gov UAA (`uaa.fr.cloud.gov`), not an auth-proxy sidecar
 - **Database:** fresh `aws-rds` `micro-psql` instance (`hedgedoc-db`) — **no data carried over** from any prior deployment (see [Incident notes](#incident-notes-2026-09-14) below)
@@ -14,7 +14,7 @@
 `hedgedoc` was originally deployed in the `staging` space. That deployment crash-looped on startup with:
 
 ```text
-warn: Database cannot be reached. Try N of 30. (SequelizeConnectionRefusedError: connect ECONNREFUSED 10.10.20.166:5432)
+warn: Database cannot be reached. Try N of 30. (SequelizeConnectionRefusedError: connect ECONNREFUSED 10.x.x.x:5432)
 ```
 
 Root cause: the `staging` space in this org is **missing the `trusted_local_networks_egress` security group binding on the `running` lifecycle**. Without it, apps in `staging` cannot reach any `10.x` internal address, including bound `aws-rds` instances — regardless of correct credentials in `VCAP_SERVICES`.
@@ -26,7 +26,7 @@ See `AGENTS.md` → *cloud.gov Networking Prerequisite* for the general diagnost
 ## Deploying from scratch
 
 ```bash
-cf target -o gsa-tts-iae-lava-beds -s dev
+cf target -o <your-org> -s dev
 
 # 1. Provision the database
 cf create-service aws-rds micro-psql hedgedoc-db
@@ -46,7 +46,7 @@ The manifest sets the UAA endpoints (`CMD_OAUTH2_AUTHORIZATION_URL`, `CMD_OAUTH2
 HedgeDoc's OAuth2 callback route is fixed at `/auth/oauth2/callback` (see [`lib/web/auth/oauth2/index.js`](https://github.com/hedgedoc/hedgedoc/blob/1.10.8/lib/web/auth/oauth2/index.js) in the HedgeDoc source), so the redirect URI registered with cloud.gov must match the deployed route exactly.
 
 ```bash
-cf target -o gsa-tts-iae-lava-beds -s dev
+cf target -o <your-org> -s dev
 
 # 1. Create the identity provider service instance
 cf create-service cloud-gov-identity-provider oauth-client hedgedoc-uaa
@@ -79,7 +79,7 @@ Rotate credentials by deleting and recreating the service key (`cf delete-servic
 The route `https://hedgedoc.app.cloud.gov/9l0qWQiZTJK6rr8hMZOHNQ` referenced in an earlier support request could not be recovered. An exhaustive search across every org and space reachable by the investigating account (7 orgs, 19 spaces) found:
 
 - No `hedgedoc-db` or similarly-named database service instance anywhere
-- One `hedgedoc` app shell in `gsa-tts-iae-lava-beds` / `staging`, but it had **no droplet, no packages ever staged, and no bound services** — i.e., it had never actually been deployed with a running container
+- One `hedgedoc` app shell in `<your-org>` / `staging`, but it had **no droplet, no packages ever staged, and no bound services** — i.e., it had never actually been deployed with a running container
 - Only one audit log entry against that app GUID, from the investigation itself
 
 Conclusion: the original database was either deleted outright (cloud.gov `aws-rds` deletions are not recoverable — there is no soft-delete) or was deployed under an org/space this account cannot access. The current deployment is a **new, empty HedgeDoc instance** with no relationship to any prior notes.

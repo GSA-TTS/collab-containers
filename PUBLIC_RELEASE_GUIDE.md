@@ -4,7 +4,7 @@
 
 This guide walks through the complete process of preparing collab-containers for public release, with emphasis on security scanning, compliance, and deployment flexibility.
 
-**Status:** Public-release preparation is in progress. Current-file lint, Dockerfile lint, Trivy filesystem scan, and Gitleaks working-tree scan pass. Do not make the repository public until Git history findings are remediated or accepted through the security process and release workflows complete successfully.
+**Status:** Public-release preparation is in progress. Current-file lint, Dockerfile lint, Trivy filesystem scan, and Gitleaks working-tree scan pass. Historical Gitleaks findings were accepted through a fingerprint-scoped security review. Do not make the repository public until release workflows complete successfully and required GitHub repository settings and sign-offs are verified.
 
 ---
 
@@ -87,9 +87,9 @@ mise run ci:pre-release-check
 # 2. Verify all scans pass
 # (see GitHub Actions run results)
 
-# 3. Create release tag
-git tag hedgedoc-v1.0.0
-git push origin hedgedoc-v1.0.0
+# 3. Create the shared release tag
+git tag v1.0.0
+git push origin v1.0.0
 
 # 4. Monitor publish-containers.yml workflow
 # (GitHub Actions automatically builds and publishes)
@@ -419,7 +419,7 @@ curl https://mise.jdx.dev/install.sh | sh
 ✅ Documentation for users, developers, and operators
 ✅ Public readiness checklist with sign-off tracking
 
-Remaining blockers before publication: remediate Git history secret findings, resolve required lint/container findings, verify release workflows in GitHub Actions, and complete the checklist sign-offs.
+Remaining blockers before publication: resolve required lint/container findings, verify release workflows in GitHub Actions, configure required GitHub repository settings, and complete the checklist sign-offs. Historical Gitleaks findings have documented, fingerprint-scoped acceptance in `GIT_HISTORY_REMEDIATION_PLAN.md`.
 
 **Next Step:** Review [PUBLIC_READINESS_CHECKLIST.md](./PUBLIC_READINESS_CHECKLIST.md) before first public release.
 

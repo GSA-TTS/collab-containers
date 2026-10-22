@@ -3,6 +3,17 @@ const { URL } = require('url');
 
 const port = Number(process.env.PORT || 3000);
 const benchmarkName = process.env.BENCHMARK_NAME || 'auth-bench-fixture';
+const MAX_UPLOAD_BYTES = 1024 * 1024;
+// Credential-bearing headers are never echoed back to the caller.
+const REDACTED_HEADERS = new Set([
+  'authorization',
+  'proxy-authorization',
+  'cookie',
+  'set-cookie',
+  'x-forwarded-access-token',
+  'x-auth-request-access-token',
+  'x-auth-request-id-token',
+]);
 
 function json(response, statusCode, payload, headers = {}) {
   response.writeHead(statusCode, {
@@ -15,11 +26,44 @@ function json(response, statusCode, payload, headers = {}) {
 
 function collectBody(request) {
   return new Promise((resolve, reject) => {
-    const chunks = [];
-    request.on('data', chunk => chunks.push(chunk));
-    request.on('end', () => resolve(Buffer.concat(chunks)));
+    let received = 0;
+    request.on('data', chunk => {
+      received += chunk.length;
+      if (received > MAX_UPLOAD_BYTES) {
+        const error = new Error('payload too large');
+        error.statusCode = 413;
+        request.destroy();
+        reject(error);
+      }
+    });
+    request.on('end', () => resolve(received));
     request.on('error', reject);
+    request.on('aborted', () => reject(new Error('request aborted')));
   });
+}
+
+function redactHeaders(headers) {
+  return Object.fromEntries(
+    Object.entries(headers).map(([name, value]) => [
+      name,
+      REDACTED_HEADERS.has(name.toLowerCase()) ? '[redacted]' : value,
+    ]),
+  );
+}
+
+function cookieNames(header) {
+  return (header || '')
+    .split(';')
+    .map(part => part.split('=')[0].trim())
+    .filter(Boolean);
+}
+
+// Only same-origin absolute paths are allowed as redirect targets.
+function safeRedirectTarget(candidate) {
+  if (!candidate.startsWith('/') || candidate.startsWith('//') || candidate.includes('\\')) {
+    return '/';
+  }
+  return candidate;
 }
 
 function requestSummary(request, requestUrl) {
@@ -35,8 +79,8 @@ function requestSummary(request, requestUrl) {
     forwardedUser: request.headers['x-forwarded-user'] || null,
     forwardedEmail: request.headers['x-forwarded-email'] || null,
     authorization: request.headers.authorization ? 'present' : 'absent',
-    cookies: request.headers.cookie || '',
-    headers: request.headers,
+    cookieNames: cookieNames(request.headers.cookie),
+    headers: redactHeaders(request.headers),
     now: new Date().toISOString(),
   };
 }
@@ -75,7 +119,7 @@ const server = http.createServer(async (request, response) => {
   }
 
   if (requestUrl.pathname === '/redirect') {
-    const destination = requestUrl.searchParams.get('to') || '/';
+    const destination = safeRedirectTarget(requestUrl.searchParams.get('to') || '/');
     response.writeHead(302, { location: destination });
     response.end();
     return;
@@ -94,10 +138,18 @@ const server = http.createServer(async (request, response) => {
   }
 
   if (requestUrl.pathname === '/upload' && request.method === 'POST') {
-    const body = await collectBody(request);
+    let bytesReceived;
+    try {
+      bytesReceived = await collectBody(request);
+    } catch (error) {
+      if (!response.headersSent && !response.writableEnded && !response.destroyed) {
+        json(response, error.statusCode || 400, { error: error.message }, { connection: 'close' });
+      }
+      return;
+    }
     return json(response, 200, {
       ok: true,
-      bytesReceived: body.length,
+      bytesReceived,
       contentType: request.headers['content-type'] || null,
       request: requestSummary(request, requestUrl),
     });
@@ -134,6 +186,10 @@ const server = http.createServer(async (request, response) => {
   });
 });
 
-server.listen(port, '0.0.0.0', () => {
-  console.log(`fixture listening on ${port}`);
-});
+if (require.main === module) {
+  server.listen(port, '0.0.0.0', () => {
+    console.log(`fixture listening on ${port}`);
+  });
+}
+
+module.exports = { server, MAX_UPLOAD_BYTES };

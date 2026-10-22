@@ -3,7 +3,7 @@
 
 > A collection of containerized open-source collaboration tools, optimized for deployment on cloud.gov with security scanning and two deployment options (from GHCR registry or local build).
 
-**Status:** Public-release preparation is in progress. Current-file lint, Dockerfile lint, Trivy filesystem scan, and working-tree secret scanning pass. Git history remediation and release workflow verification are still required before making the repository public.
+**Status:** Public-release preparation is in progress. Current-file lint, Dockerfile lint, Trivy filesystem scan, and working-tree secret scanning pass. Historical Gitleaks findings have documented, fingerprint-scoped acceptance. Release workflow verification, GitHub repository configuration, and required sign-offs are still required before making the repository public.
 
 ## 🚀 Quick Start
 
@@ -168,7 +168,7 @@ This repository includes automated GitHub Actions workflows that:
 ### How to Create a Release
 
 1. Ensure GitHub Actions have permission to write packages and contents
-2. Publish a GitHub release with a tag like `hedgedoc-v1.0.0`
+2. Publish a GitHub release with a shared tag like `v1.0.0`
 3. Or run `publish-containers.yml` manually with version `1.0.0`
 4. Review findings in workflow artifacts and per-container GitHub Release
 
@@ -268,8 +268,8 @@ See [SECURITY.md](./SECURITY.md) for vulnerability reporting and compliance deta
 This repo is set up for the GSA-TTS centralized scanning service.
 
 - `renovate.json` extends `local>GSA-TTS/scanning-service:default.json5`.
-- `.github/workflows/dependency-lint.yml` adds the org dependency lint PR check in advisory mode.
-- `.github/workflows/secret-scan.yml` adds the org secret scan PR check in advisory mode.
+- `.github/workflows/dependency-lint.yml` adds the org dependency lint PR check as a required gate.
+- `.github/workflows/secret-scan.yml` adds the org secret scan PR check as a required gate.
 - `.githooks/pre-commit` runs `gitleaks detect --staged` for local secret scanning.
 
 ### Remaining manual onboarding steps

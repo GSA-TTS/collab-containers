@@ -36,23 +36,14 @@ jobs:
         run: |
           set -euo pipefail
 
-          matrix_json="$({
-            shopt -s nullglob
-            found=0
-            printf '{"include":['
-            for dockerfile in */Dockerfile; do
-              found=1
-              context_dir="${dockerfile%/Dockerfile}"
-              image_name="$(printf '%s' "$context_dir" | tr '[:upper:]' '[:lower:]')"
-              printf '{"context":"%s","dockerfile":"%s","image":"%s"},' \
-                "$context_dir" "$dockerfile" "$image_name"
-            done
-            if [[ "$found" -eq 0 ]]; then
-              printf ']}'
-            else
-              printf '\b]}'
-            fi
-          })"
+          shopt -s nullglob
+          matrix_json='{"include":[]}'
+          for dockerfile in */Dockerfile; do
+            context_dir="${dockerfile%/Dockerfile}"
+            image_name="$(printf '%s' "$context_dir" | tr '[:upper:]' '[:lower:]')"
+            matrix_json="$(jq -c --arg context "$context_dir" --arg dockerfile "$dockerfile" --arg image "$image_name" \
+              '.include += [{context: $context, dockerfile: $dockerfile, image: $image}]' <<< "$matrix_json")"
+          done
 
           echo "matrix=$matrix_json" >> "$GITHUB_OUTPUT"
 
@@ -105,19 +96,19 @@ jobs:
             type=raw,value=${{ env.RELEASE_VERSION }}
             type=raw,value=latest
 
-      - name: Build and push image
+      - name: Build local image for security verification
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          load: true
+          tags: local/${{ matrix.image }}:release-${{ github.run_id }}
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Run Trivy vulnerability scan
         uses: aquasecurity/trivy-action@0.35.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
+          image-ref: local/${{ matrix.image }}:release-${{ github.run_id }}
           format: 'sarif'
           output: trivy-results-${{ matrix.image }}.sarif
           severity: 'HIGH,CRITICAL'
@@ -126,14 +117,14 @@ jobs:
       - name: Generate SBOM (SPDX)
         uses: aquasecurity/trivy-action@0.35.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
+          image-ref: local/${{ matrix.image }}:release-${{ github.run_id }}
           format: 'spdx-json'
           output: sbom-${{ matrix.image }}-spdx.json
 
       - name: Generate SBOM (CycloneDX)
         uses: aquasecurity/trivy-action@0.35.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
+          image-ref: local/${{ matrix.image }}:release-${{ github.run_id }}
           format: 'cyclonedx'
           output: sbom-${{ matrix.image }}-cyclonedx.json
 
@@ -161,7 +152,7 @@ jobs:
         uses: ./DockSec
         with:
           dockerfile: ${{ matrix.dockerfile }}
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
+          image: local/${{ matrix.image }}:release-${{ github.run_id }}
           scan_only: "true"
 
       - name: Collect DockSec reports
@@ -211,6 +202,29 @@ jobs:
           name: ${{ matrix.image }}-${{ env.RELEASE_VERSION }}-docksec
           path: |
             ${{ steps.reports.outputs.results_dir }}
+
+      # Fail publication only after preserving the scan and DockSec evidence.
+      - name: Enforce Trivy vulnerability threshold
+        uses: aquasecurity/trivy-action@0.35.0
+        with:
+          image-ref: local/${{ matrix.image }}:release-${{ github.run_id }}
+          format: 'table'
+          severity: 'HIGH,CRITICAL'
+          scanners: 'vuln,config,secret'
+          exit-code: '1'
+
+      - name: Push verified image
+        env:
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+          LOCAL_IMAGE: local/${{ matrix.image }}:release-${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r tag; do
+            [[ -n "$tag" ]] || continue
+            docker image tag "$LOCAL_IMAGE" "$tag"
+            docker image push "$tag"
+          done <<< "$IMAGE_TAGS"
 
       - name: Create container release
         env:

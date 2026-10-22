@@ -16,9 +16,9 @@ Do not broaden the Gitleaks allowlist without a new review. If new history findi
 
 ## Current Redacted Inventory
 
-Redacted scan date: 2026-09-11
+Redacted scan dates: 2026-09-11 and 2026-10-05
 
-The current history scan reports 9 findings. All findings use the `generic-api-key` rule. The table below intentionally includes only remediation metadata and omits secret values, matched text, authors, emails, and line contents.
+The current history scan reports 13 findings. The initial nine use the `generic-api-key` rule; the four later-reviewed OpenObserve findings use the `curl-auth-user` rule. The table below intentionally includes only remediation metadata and omits secret values, matched text, authors, emails, and line contents.
 
 | File | Start line | Rule ID | Commit prefix |
 |------|------------|---------|---------------|
@@ -31,10 +31,20 @@ The current history scan reports 9 findings. All findings use the `generic-api-k
 | `auth-benchmark/pomerium/vars.yml` | 8 | `generic-api-key` | `424464e05ef6` |
 | `auth-benchmark/oauth2-proxy/manifest.yml` | 7 | `generic-api-key` | `424464e05ef6` |
 | `auth-benchmark/LOGINGOV.md` | 121 | `generic-api-key` | `0d3840df603d` |
+| `openobserve/bin/push-openobserve.sh` | 83 | `curl-auth-user` | `496219d5709b` |
+| `openobserve/README.md` | 71 | `curl-auth-user` | `496219d5709b` |
+| `openobserve/README.md` | 115 | `curl-auth-user` | `496219d5709b` |
+| `openobserve/README.md` | 121 | `curl-auth-user` | `496219d5709b` |
+
+> Repository owner confirmation (2026-10-05): The items above are user-provided generic provisioning examples. All instances created during active testing have been destroyed. These values are not sensitive or controlled.
+
+> Repository owner confirmation (2026-10-22): Credentials in the previously tracked `vars.yml` files (`backstage`, `auth-benchmark/{fixture-app,oauth2-proxy,pomerium,zitadel}`) were rotated or never used. These files are now untracked and covered by `.gitignore`; sanitized `vars.example.yml` templates replace them. Their prior contents remain in Git history.
+
+An authorized Cloud.gov inventory of the currently targeted `<org>/dev` space on 2026-10-05 found no OpenObserve application or related UAA service. This check did not query other spaces or organizations.
 
 Initial triage should classify each row as real credential, generated secret, placeholder, or scanner false positive. Treat unknowns as potentially exposed credentials until a security owner decides otherwise.
 
-Review outcome: these rows were confirmed harmless by the repository owner on 2026-09-11 and accepted with exact Gitleaks fingerprints in `.gitleaksignore`. This avoids rewriting repository history while keeping future unrelated findings visible.
+Review outcome: the initial nine rows were confirmed harmless by the repository owner on 2026-09-11, and the four OpenObserve `curl-auth-user` examples were confirmed harmless on 2026-10-05. All are accepted with exact Gitleaks fingerprints in `.gitleaksignore`. This avoids rewriting repository history while keeping future unrelated findings visible.
 
 ## Guardrails
 

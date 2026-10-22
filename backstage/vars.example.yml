@@ -8,8 +8,8 @@ proxy_name: backstage-proxy-staging
 proxy_container_image: REPLACE_WITH_PINNED_PROXY_IMAGE
 
 # Routes
-protected_host: backstage-staging.app.cloud.gov
-internal_host: backstage-staging.apps.internal
+protected_host: example-protected-host.app.cloud.gov
+internal_host: example-internal-host.apps.internal
 
 # UAA service (created via cf create-service cloud-gov-identity-provider)
 uaa_service_name: backstage-uaa
@@ -18,14 +18,14 @@ uaa_service_name: backstage-uaa
 db_service_name: backstage-db
 
 # Upstream URL (oauth2-proxy forwards to this internal route)
-upstream_url: http://backstage-staging.apps.internal:8080
+upstream_url: http://example-app.apps.internal:8080
 
 # oauth2-proxy cookie secret (must be exactly 16, 24, or 32 bytes)
 # Generate with: openssl rand -hex 16
 cookie_secret: REPLACE_WITH_SECURE_RANDOM_VALUE
 
 # Cookie and whitelist domains
-cookie_domain: backstage-staging.app.cloud.gov
+cookie_domain: example-app.app.cloud.gov
 whitelist_domain: .app.cloud.gov
 
 # UAA scope (openid is standard for authentication)

@@ -1,5 +1,9 @@
 # Confirmed harmless historical findings accepted on 2026-09-11.
 # Keep this file scoped to individual fingerprints; do not add broad path or rule ignores.
+496219d5709b3b0a6475c45bd97d2971a385428a:openobserve/README.md:curl-auth-user:71
+496219d5709b3b0a6475c45bd97d2971a385428a:openobserve/README.md:curl-auth-user:115
+496219d5709b3b0a6475c45bd97d2971a385428a:openobserve/README.md:curl-auth-user:121
+496219d5709b3b0a6475c45bd97d2971a385428a:openobserve/bin/push-openobserve.sh:curl-auth-user:83
 0d3840df603daa8519d339de5e85d39cdacdfbbe:auth-benchmark/LOGINGOV.md:generic-api-key:121
 424464e05ef6f7b404b32c357cfc8377377c0803:auth-benchmark/oauth2-proxy/manifest.yml:generic-api-key:7
 424464e05ef6f7b404b32c357cfc8377377c0803:auth-benchmark/oauth2-proxy/vars.yml:generic-api-key:5

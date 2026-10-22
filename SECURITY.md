@@ -65,7 +65,7 @@ Scans run:
 #### Published Releases (GitHub)
 
 1. Navigate to [Releases](https://github.com/GSA-TTS/collab-containers/releases)
-2. Click on a release tag (e.g., `hedgedoc-v1.0.0`)
+2. Click on a per-container release tag (e.g., `hedgedoc-v1.0.0`)
 3. Download attached reports:
    - `trivy-vulnerability-scan.sarif` — Trivy results
    - `sbom-spdx.json` — SPDX Software Bill of Materials
@@ -232,11 +232,12 @@ Designed for deployment on cloud.gov:
 
 No public advisories are currently published. See GitHub Security tab and release artifacts for active scan findings.
 
-### Public Release Blockers
+### Public Release Gates
 
-- Git history secret findings must be remediated or handled through the security process before publication.
+- Historical Gitleaks findings have documented, fingerprint-scoped acceptance in `GIT_HISTORY_REMEDIATION_PLAN.md`; any new unaccepted finding blocks release.
 - Current-file secret scans must pass before every release.
 - Container and YAML lint findings must be resolved or explicitly documented as accepted risk before public release.
+- Release workflows, GitHub branch protection, code scanning configuration, and required sign-offs must be verified before public release.
 
 ### Known Limitations
 

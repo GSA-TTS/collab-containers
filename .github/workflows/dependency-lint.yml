@@ -1,4 +1,5 @@
 ---
+# yamllint disable rule:truthy
 name: Dependency Lint
 
 on:
@@ -8,4 +9,4 @@ jobs:
   lint:
     uses: GSA-TTS/scanning-service/.github/workflows/dependency-lint.yml@main
     with:
-      fail-on-error: false
+      fail-on-error: true

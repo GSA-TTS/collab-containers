@@ -1,0 +1,5 @@
+# Add authorized GitHub user or team identities before enabling required code-owner
+# reviews in branch protection. Do not use this placeholder as an access-control rule.
+#
+# Example:
+# * @GSA-TTS/collab-containers-maintainers

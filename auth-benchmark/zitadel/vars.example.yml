@@ -5,9 +5,9 @@
 # =============================================================================
 # Route Configuration
 # =============================================================================
-public_host: zitadel-staging.app.cloud.gov
-internal_api_host: zitadel-api-staging.apps.internal
-external_domain: zitadel-staging.app.cloud.gov
+public_host: example-public-host.app.cloud.gov
+internal_api_host: example-internal-api-host.apps.internal
+external_domain: example-app.app.cloud.gov
 
 # =============================================================================
 # Database Service
@@ -16,13 +16,13 @@ db_service_name: zitadel-db
 
 # Database credentials (from cf service-key zitadel-db zitadel-key)
 # Replace these placeholders locally before any manual cf push.
-postgres_host: REPLACE_WITH_RDS_HOST
+postgres_host: example-postgres-host.app.cloud.gov
 postgres_db: REPLACE_WITH_RDS_DB
 postgres_user: REPLACE_WITH_RDS_USER
-postgres_password: REPLACE_WITH_RDS_PASSWORD
+postgres_password: REPLACE_WITH_SECURE_RANDOM_VALUE
 
 # =============================================================================
 # Security
 # =============================================================================
 # Must be exactly 32 characters. Generate with: openssl rand -hex 16
-masterkey: REPLACE_WITH_32_CHAR_MASTERKEY
+masterkey: REPLACE_WITH_SECURE_RANDOM_VALUE
