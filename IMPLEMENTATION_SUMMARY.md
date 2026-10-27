@@ -1,8 +1,8 @@
 # Public Release Readiness: Implementation Summary & Baseline Report
 
 **Date:** 2026-09-11
-**Status:** Public-release preparation framework implemented; publication is blocked pending Git history remediation and workflow verification.
-**Baseline Scans:** Current-file lint, Dockerfile lint, Trivy filesystem scan, and Gitleaks working-tree scan pass. Git history still reports redacted Gitleaks findings.
+**Status:** Public-release preparation framework implemented; publication is blocked pending workflow verification, GitHub repository configuration, and required sign-offs.
+**Baseline Scans:** Current-file lint, Dockerfile lint, Trivy filesystem scan, and Gitleaks working-tree scan pass. Historical Gitleaks findings have documented, fingerprint-scoped acceptance.
 
 ---
 
@@ -138,10 +138,10 @@ mise run help:deployment           # Deployment guide
 ### Baseline Established (2026-09-11)
 
 #### Scan: Gitleaks (Secret Detection)
-- **Status:** ✅ PASSED
-- **Result:** Current filesystem scan passes after placeholder cleanup; Git history scan still reports redacted findings.
+- **Status:** ✅ ACCEPTED
+- **Result:** Current filesystem scan passes after placeholder cleanup. Nine historical findings were reviewed as harmless and accepted with exact fingerprints in `.gitleaksignore`.
 - **Timespan:** Current tree and Git history were checked separately.
-- **Action:** Remediate or formally accept Git history findings before public release.
+- **Evidence:** `GIT_HISTORY_REMEDIATION_PLAN.md` records the inventory, owner review outcome, and acceptance guardrails.
 
 #### Scan: Hadolint (Dockerfile Linting)
 - **Status:** ✅ PASSED
@@ -217,10 +217,10 @@ docker run -it local/<app>:latest
 ## 6. Next Steps for Release
 
 ### Immediate (This Week)
-1. [ ] Remediate or formally accept Git history Gitleaks findings
-2. [ ] Run `mise run scan:all` to verify locally after history remediation
-3. [ ] Verify GitHub Actions workflows on PR and release paths
-4. [ ] Test both deployment options (GHCR and local build)
+1. [ ] Run `mise run scan:all` to verify locally
+2. [ ] Verify GitHub Actions workflows on PR and release paths
+3. [ ] Test both deployment options (GHCR and local build)
+4. [ ] Configure and verify required GitHub branch protection and security settings
 
 ### Pre-Release (Week of Release)
 1. [ ] Go through PUBLIC_READINESS_CHECKLIST.md
@@ -260,7 +260,7 @@ docker run -it local/<app>:latest
 ```bash
 # Installation
 curl https://mise.jdx.dev/install.sh | sh
-cd /home/johnhjediny@ent.ds.gsa.gov/collab-containers
+cd /path/to/collab-containers
 mise install
 
 # Verification
@@ -340,9 +340,9 @@ The collab-containers repository has a public-release preparation framework with
 6. ✅ Baseline security metrics established
 7. ✅ Production readiness checklist
 
-**Next Action:** Remediate Git history findings, verify GitHub Actions workflows, then complete PUBLIC_READINESS_CHECKLIST.md.
+**Next Action:** Verify GitHub Actions workflows, configure required GitHub settings, and complete PUBLIC_READINESS_CHECKLIST.md.
 
 ---
 
 *Report Updated: 2026-09-11*
-*Current-file gates pass; public release remains blocked by Git history remediation and release workflow verification.*
+*Current-file gates pass; historical Gitleaks findings have documented acceptance. Public release remains blocked by workflow verification, GitHub configuration, and sign-offs.*

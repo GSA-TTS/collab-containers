@@ -16,4 +16,3 @@ cosign.key
 sbom/
 trivy-*.sarif
 trivy-sbom-*.json
-*-docksec-report.*

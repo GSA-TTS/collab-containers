@@ -212,7 +212,7 @@ cf target
 Expected target:
 
 - API: `https://api.fr.cloud.gov`
-- org: `gsa-tts-iae-lava-beds`
+- org: `<your-org>`
 - space: `staging`
 
 2. Confirm the database service exists:

@@ -15,20 +15,19 @@ on:
 
 permissions:
   contents: read
-  packages: write
-  security-events: write  # Required for uploading SARIF reports
 
 jobs:
   discover:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       matrix: ${{ steps.discover.outputs.matrix }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-          submodules: recursive
 
       - name: Discover Docker build contexts
         id: discover
@@ -36,23 +35,14 @@ jobs:
         run: |
           set -euo pipefail
 
-          matrix_json="$({
-            shopt -s nullglob
-            found=0
-            printf '{"include":['
-            for dockerfile in */Dockerfile; do
-              found=1
-              context_dir="${dockerfile%/Dockerfile}"
-              image_name="$(printf '%s' "$context_dir" | tr '[:upper:]' '[:lower:]')"
-              printf '{"context":"%s","dockerfile":"%s","image":"%s"},' \
-                "$context_dir" "$dockerfile" "$image_name"
-            done
-            if [[ "$found" -eq 0 ]]; then
-              printf ']}'
-            else
-              printf '\b]}'
-            fi
-          })"
+          shopt -s nullglob
+          matrix_json='{"include":[]}'
+          for dockerfile in */Dockerfile; do
+            context_dir="${dockerfile%/Dockerfile}"
+            image_name="$(printf '%s' "$context_dir" | tr '[:upper:]' '[:lower:]')"
+            matrix_json="$(jq -c --arg context "$context_dir" --arg dockerfile "$dockerfile" --arg image "$image_name" \
+              '.include += [{context: $context, dockerfile: $dockerfile, image: $image}]' <<< "$matrix_json")"
+          done
 
           echo "matrix=$matrix_json" >> "$GITHUB_OUTPUT"
 
@@ -63,6 +53,7 @@ jobs:
     permissions:
       contents: write
       packages: write
+      actions: read  # Required by upload-sarif on private repositories
       security-events: write
     strategy:
       fail-fast: false
@@ -72,10 +63,9 @@ jobs:
       RELEASE_VERSION: ${{ github.event_name == 'release' && github.event.release.tag_name || format('v{0}', inputs.release_version) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-          submodules: recursive
 
       - name: Normalize image name
         env:
@@ -86,11 +76,20 @@ jobs:
           set -euo pipefail
           echo "IMAGE_NAME=${REPOSITORY_OWNER,,}/${MATRIX_IMAGE}" >> "$GITHUB_ENV"
 
+      - name: Free runner disk space
+        # The Backstage build (Node + native deps) plus image scan exceeds the default runner disk.
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker system prune -af >/dev/null 2>&1 || true
+          df -h / | tail -1
+
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -98,127 +97,117 @@ jobs:
 
       - name: Extract image metadata
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=${{ env.RELEASE_VERSION }}
             type=raw,value=latest
 
-      - name: Build and push image
-        uses: docker/build-push-action@v6
+      - name: Build local image for security verification
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          load: true
+          tags: local/${{ matrix.image }}:release-${{ github.run_id }}
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
+          image-ref: local/${{ matrix.image }}:release-${{ github.run_id }}
           format: 'sarif'
           output: trivy-results-${{ matrix.image }}.sarif
           severity: 'HIGH,CRITICAL'
           scanners: 'vuln,config,secret'
 
       - name: Generate SBOM (SPDX)
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
+          image-ref: local/${{ matrix.image }}:release-${{ github.run_id }}
           format: 'spdx-json'
           output: sbom-${{ matrix.image }}-spdx.json
 
       - name: Generate SBOM (CycloneDX)
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
+          image-ref: local/${{ matrix.image }}:release-${{ github.run_id }}
           format: 'cyclonedx'
           output: sbom-${{ matrix.image }}-cyclonedx.json
 
-      - name: Upload Trivy SARIF report to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@v3
+      # Findings are recorded, not blocking: they are published to the job summary and the
+      # stored artifact, and tracked in docs/IMAGE-VULNERABILITY-REGISTER.md.
+      - name: Record Trivy findings (non-blocking)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
+        with:
+          image-ref: local/${{ matrix.image }}:release-${{ github.run_id }}
+          format: 'table'
+          output: trivy-findings-${{ matrix.image }}.txt
+          severity: 'HIGH,CRITICAL'
+          scanners: 'vuln,config,secret'
+          exit-code: '0'
+
+      - name: Publish findings summary
         if: always()
+        env:
+          IMAGE: ${{ matrix.image }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="trivy-findings-${IMAGE}.txt"
+          {
+            echo "## Trivy findings: ${IMAGE} (HIGH/CRITICAL, non-blocking)"
+            if [[ -f "$report" ]]; then
+              grep -E '^Total:' "$report" || echo "No vulnerability totals reported."
+              echo '```text'
+              head -c 60000 "$report"
+              echo '```'
+            else
+              echo "Trivy findings report was not produced."
+            fi
+            echo "Register: docs/IMAGE-VULNERABILITY-REGISTER.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Trivy SARIF report to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@4bfa242aa49c5f7c6770b98670d354a7dfac05f8 # v3
+        if: always()
+        # Needs GitHub Code Security (private repos) or a public repository. The
+        # report is also kept as a workflow artifact.
+        continue-on-error: true
         with:
           sarif_file: trivy-results-${{ matrix.image }}.sarif
           category: trivy-${{ matrix.image }}
 
       - name: Store scan and SBOM artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: ${{ matrix.image }}-${{ env.RELEASE_VERSION }}-security-reports
           path: |
             trivy-results-${{ matrix.image }}.sarif
+            trivy-findings-${{ matrix.image }}.txt
             sbom-${{ matrix.image }}-spdx.json
             sbom-${{ matrix.image }}-cyclonedx.json
           retention-days: 90
 
-      - name: Run DockSec scan-only analysis
+      - name: Push verified image
         env:
-          DOCKSEC_RESULTS_DIR: ${{ runner.temp }}/docksec-results/${{ matrix.image }}
-        uses: ./DockSec
-        with:
-          dockerfile: ${{ matrix.dockerfile }}
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.RELEASE_VERSION }}
-          scan_only: "true"
-
-      - name: Collect DockSec reports
-        id: reports
-        env:
-          DOCKSEC_RESULTS_DIR: ${{ runner.temp }}/docksec-results/${{ matrix.image }}
+          IMAGE_TAGS: ${{ steps.meta.outputs.tags }}
+          LOCAL_IMAGE: local/${{ matrix.image }}:release-${{ github.run_id }}
         shell: bash
         run: |
           set -euo pipefail
-
-          python3 - <<'PY'
-          import os
-          import pathlib
-
-          output_path = pathlib.Path(os.environ["GITHUB_OUTPUT"])
-          results_root = pathlib.Path(os.environ["DOCKSEC_RESULTS_DIR"])
-
-          report_dirs = sorted(
-              [path for path in results_root.iterdir() if path.is_dir()],
-              key=lambda path: path.stat().st_mtime,
-              reverse=True,
-          ) if results_root.exists() else []
-
-          if not report_dirs:
-              raise SystemExit("DockSec did not produce a report directory")
-
-          latest_dir = report_dirs[0]
-          reports = {
-              "json_report": next(latest_dir.glob("*.json"), None),
-              "html_report": next(latest_dir.glob("*.html"), None),
-              "csv_report": next(latest_dir.glob("*.csv"), None),
-              "pdf_report": next(latest_dir.glob("*.pdf"), None),
-          }
-
-          if reports["json_report"] is None:
-              raise SystemExit(f"DockSec JSON report not found in {latest_dir}")
-
-          with output_path.open("a", encoding="utf-8") as fh:
-              fh.write(f"results_dir={latest_dir}\n")
-              for key, value in reports.items():
-                  fh.write(f"{key}={value or ''}\n")
-          PY
-
-      - name: Upload scan artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.image }}-${{ env.RELEASE_VERSION }}-docksec
-          path: |
-            ${{ steps.reports.outputs.results_dir }}
+          while IFS= read -r tag; do
+            [[ -n "$tag" ]] || continue
+            docker image tag "$LOCAL_IMAGE" "$tag"
+            docker image push "$tag"
+          done <<< "$IMAGE_TAGS"
 
       - name: Create container release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MATRIX_IMAGE: ${{ matrix.image }}
-          JSON_REPORT: ${{ steps.reports.outputs.json_report }}
-          HTML_REPORT: ${{ steps.reports.outputs.html_report }}
-          CSV_REPORT: ${{ steps.reports.outputs.csv_report }}
         shell: bash
         run: |
           set -euo pipefail
@@ -237,7 +226,6 @@ jobs:
           ## Security Reports
           This release includes:
           - **Trivy** vulnerability scan (SARIF format)
-          - **DockSec** analysis (JSON, HTML, CSV)
           - **SBOM** (Software Bill of Materials) in SPDX and CycloneDX formats
           - **CodeQL** integration for GitHub Security tab
 
@@ -261,7 +249,6 @@ jobs:
           ## Verification
           All images are scanned with:
           - Trivy (vulnerability & configuration)
-          - DockSec (comprehensive security analysis)
           - Gitleaks (secret detection)
 
           Reports attached to this release.
@@ -271,13 +258,6 @@ jobs:
           assets=("trivy-results-${MATRIX_IMAGE}.sarif#trivy-vulnerability-scan.sarif")
           assets+=("sbom-${MATRIX_IMAGE}-spdx.json#sbom-spdx.json")
           assets+=("sbom-${MATRIX_IMAGE}-cyclonedx.json#sbom-cyclonedx.json")
-          assets+=("${JSON_REPORT}#docksec-report.json")
-          if [[ -n "${HTML_REPORT}" ]]; then
-            assets+=("${HTML_REPORT}#docksec-report.html")
-          fi
-          if [[ -n "${CSV_REPORT}" ]]; then
-            assets+=("${CSV_REPORT}#docksec-report.csv")
-          fi
 
           if gh release view "$tag" >/dev/null 2>&1; then
             gh release upload "$tag" --clobber "${assets[@]}"

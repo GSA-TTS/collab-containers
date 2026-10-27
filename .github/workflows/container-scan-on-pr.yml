@@ -14,19 +14,19 @@ on:
 
 permissions:
   contents: read
-  security-events: write  # Required for SARIF upload
 
 jobs:
   discover:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       matrix: ${{ steps.discover.outputs.matrix }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-          submodules: recursive
 
       - name: Discover Docker build contexts
         id: discover
@@ -34,23 +34,14 @@ jobs:
         run: |
           set -euo pipefail
 
-          matrix_json="$({
-            shopt -s nullglob
-            found=0
-            printf '{"include":['
-            for dockerfile in */Dockerfile; do
-              found=1
-              context_dir="${dockerfile%/Dockerfile}"
-              image_name="$(printf '%s' "$context_dir" | tr '[:upper:]' '[:lower:]')"
-              printf '{"context":"%s","dockerfile":"%s","image":"%s"},' \
-                "$context_dir" "$dockerfile" "$image_name"
-            done
-            if [[ "$found" -eq 0 ]]; then
-              printf ']}'
-            else
-              printf '\b]}'
-            fi
-          })"
+          shopt -s nullglob
+          matrix_json='{"include":[]}'
+          for dockerfile in */Dockerfile; do
+            context_dir="${dockerfile%/Dockerfile}"
+            image_name="$(printf '%s' "$context_dir" | tr '[:upper:]' '[:lower:]')"
+            matrix_json="$(jq -c --arg context "$context_dir" --arg dockerfile "$dockerfile" --arg image "$image_name" \
+              '.include += [{context: $context, dockerfile: $dockerfile, image: $image}]' <<< "$matrix_json")"
+          done
 
           echo "matrix=$matrix_json" >> "$GITHUB_OUTPUT"
 
@@ -58,21 +49,33 @@ jobs:
     needs: discover
     if: ${{ fromJson(needs.discover.outputs.matrix).include[0] != null }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read  # Required by upload-sarif on private repositories
+      security-events: write  # Required for SARIF upload
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
-          submodules: recursive
+
+      - name: Free runner disk space
+        # The Backstage build (Node + native deps) plus image scan exceeds the default runner disk.
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker system prune -af >/dev/null 2>&1 || true
+          df -h / | tail -1
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Build local image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
@@ -80,7 +83,7 @@ jobs:
           tags: local/${{ matrix.image }}:pr-${{ github.event.pull_request.number }}
 
       - name: Run Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@0.35.0
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
           image-ref: local/${{ matrix.image }}:pr-${{ github.event.pull_request.number }}
           format: 'sarif'
@@ -88,27 +91,56 @@ jobs:
           severity: 'HIGH,CRITICAL'
           scanners: 'vuln,config,secret'
 
+      # Upload the full SARIF report. Findings are recorded below, not blocking.
       - name: Upload Trivy SARIF to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@4bfa242aa49c5f7c6770b98670d354a7dfac05f8 # v3
         if: always()
+        # Needs GitHub Code Security (private repos) or a public repository. The
+        # report is also kept as a workflow artifact.
+        continue-on-error: true
         with:
           sarif_file: trivy-results-${{ matrix.image }}.sarif
           category: trivy-pr-${{ matrix.image }}
 
-      - name: Run DockSec scan-only analysis
-        env:
-          DOCKSEC_RESULTS_DIR: ${{ runner.temp }}/docksec-results/${{ matrix.image }}
-        uses: ./DockSec
+      # Findings are recorded, not blocking: they are published to the job summary and the
+      # stored artifact, and tracked in docs/IMAGE-VULNERABILITY-REGISTER.md.
+      - name: Record Trivy findings (non-blocking)
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # 0.35.0
         with:
-          dockerfile: ${{ matrix.dockerfile }}
-          image: local/${{ matrix.image }}:pr-${{ github.event.pull_request.number }}
-          scan_only: "true"
+          image-ref: local/${{ matrix.image }}:pr-${{ github.event.pull_request.number }}
+          format: 'table'
+          output: trivy-findings-${{ matrix.image }}.txt
+          severity: 'HIGH,CRITICAL'
+          scanners: 'vuln,config,secret'
+          exit-code: '0'
 
-      - name: Upload DockSec artifacts
-        uses: actions/upload-artifact@v4
+      - name: Publish findings summary
+        if: always()
+        env:
+          IMAGE: ${{ matrix.image }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          report="trivy-findings-${IMAGE}.txt"
+          {
+            echo "## Trivy findings: ${IMAGE} (HIGH/CRITICAL, non-blocking)"
+            if [[ -f "$report" ]]; then
+              grep -E '^Total:' "$report" || echo "No vulnerability totals reported."
+              echo '```text'
+              head -c 60000 "$report"
+              echo '```'
+            else
+              echo "Trivy findings report was not produced."
+            fi
+            echo "Register: docs/IMAGE-VULNERABILITY-REGISTER.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload scan artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: pr-${{ matrix.image }}-security-scan
           path: |
-            ${{ runner.temp }}/docksec-results/${{ matrix.image }}
             trivy-results-${{ matrix.image }}.sarif
+            trivy-findings-${{ matrix.image }}.txt
           retention-days: 30

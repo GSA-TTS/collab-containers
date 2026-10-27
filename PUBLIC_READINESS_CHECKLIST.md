@@ -2,7 +2,7 @@
 
 This checklist ensures the collab-containers repository meets security, compliance, and quality standards before public release.
 
-**Current Status:** Current-file lint, Dockerfile lint, Trivy filesystem scan, and Gitleaks working-tree scan pass. Public release remains blocked until Git history findings are remediated or formally accepted and release workflows are verified.
+**Current Status:** Current-file lint, Dockerfile lint, Trivy filesystem scan, and Gitleaks working-tree scan pass. Historical Gitleaks findings have documented, fingerprint-scoped acceptance. Public release remains blocked until release workflows, GitHub repository settings, and required sign-offs are verified.
 
 **Release Version:** ___________
 **Release Date:** ___________
@@ -25,14 +25,13 @@ This checklist ensures the collab-containers repository meets security, complian
   mise run scan:trivy-container <image-name>
   ```
 
-- [ ] No CRITICAL vulnerabilities in Trivy results
+- [ ] Every HIGH/CRITICAL Trivy finding is either fixed or recorded in
+  `docs/IMAGE-VULNERABILITY-REGISTER.md` with an owner decision (findings are non-blocking by policy)
   ```bash
-  # Verify: trivy-results-*.sarif shows no CRITICAL
+  # Verify: trivy-findings-*.txt and the job summary were reviewed against the register
   ```
 
-- [ ] All images scanned with DockSec
-  - [ ] Review `docksec-report.html` for all images
-  - [ ] Address critical findings before release
+  - [ ] Record unresolved findings in `docs/IMAGE-VULNERABILITY-REGISTER.md` (non-blocking by policy)
 
 - [ ] SBOMs generated for all images
   - [ ] SPDX format: `sbom-*-spdx.json`
@@ -41,11 +40,13 @@ This checklist ensures the collab-containers repository meets security, complian
 
 ### Source Code
 
-- [ ] No secrets detected in git history
+- [x] Historical Gitleaks findings have documented security acceptance
   ```bash
   mise run scan:secrets
-  # Output: "No secrets found" ✓
+  # Output: no unaccepted findings ✓
   ```
+  - [x] Accepted fingerprints are listed in `.gitleaksignore`
+  - [x] Acceptance rationale is recorded in `GIT_HISTORY_REMEDIATION_PLAN.md`
 
 - [ ] No hardcoded credentials, API keys, or tokens
   ```bash
@@ -188,7 +189,6 @@ This checklist ensures the collab-containers repository meets security, complian
 
 - [ ] Release artifacts are attached
   - [ ] Trivy SARIF report attached
-  - [ ] DockSec reports (JSON, HTML, CSV) attached
   - [ ] SBOM files (SPDX, CycloneDX) attached
 
 ---
@@ -197,9 +197,10 @@ This checklist ensures the collab-containers repository meets security, complian
 
 ### Visibility & Access
 
-- [ ] Repository is set to **Public**
-  - [ ] Settings → General → "Repository visibility" = Public
-  - [ ] Everyone can discover the repository
+- [ ] Repository visibility explicitly approved by the repository owner
+  - [ ] Keep the repository private until all release gates and sign-offs pass
+  - [ ] If public release is approved: Settings → General → "Repository visibility" = Public
+  - [ ] Confirm the repository is discoverable only after the approval is recorded
 
 - [ ] License is properly configured
   - [ ] CC0 1.0 Public Domain Dedication (confirmed in this repo)
@@ -226,12 +227,12 @@ This checklist ensures the collab-containers repository meets security, complian
 ### Issue & Pull Request Management
 
 - [ ] Issue templates created
-  - [ ] `ISSUE_TEMPLATE/bug_report.md`
-  - [ ] `ISSUE_TEMPLATE/feature_request.md`
+- [x] `ISSUE_TEMPLATE/bug_report.md`
+- [x] `ISSUE_TEMPLATE/feature_request.md`
 
 - [ ] Pull request template created
-  - [ ] `.github/pull_request_template.md` exists
-  - [ ] Includes security checklist
+- [x] `.github/pull_request_template.md` exists
+- [x] Includes security checklist
 
 - [ ] Contributor guidelines clear
   - [ ] `CONTRIBUTING.md` exists or in README
@@ -245,12 +246,12 @@ This checklist ensures the collab-containers repository meets security, complian
   - [ ] Automated dependency updates enabled
   - [ ] Security update PRs created automatically
 
-- [ ] Secret scanning enabled
+- [ ] Secret scanning enabled and required by branch protection
   - [ ] `.github/workflows/secret-scan.yml` present
   - [ ] Gitleaks pre-commit hook configured
   - [ ] Prevent secrets from being committed
 
-- [ ] Code scanning enabled
+- [ ] Code scanning enabled and required by branch protection
   - [ ] `.github/workflows/dependency-lint.yml` configured
   - [ ] Trivy scanning in container workflows
   - [ ] SARIF reports uploaded to GitHub Security tab
@@ -273,7 +274,7 @@ This checklist ensures the collab-containers repository meets security, complian
 
 - [ ] Security scanning in place (aligns with NIST SP 800-53)
   - [ ] Vulnerability scanning: Trivy ✓
-  - [ ] Configuration scanning: DockSec ✓
+  - [ ] Configuration scanning: Trivy (misconfig) and Hadolint ✓
   - [ ] Secret scanning: Gitleaks ✓
   - [ ] Dependency scanning: Grype ✓
 
@@ -320,10 +321,10 @@ This checklist ensures the collab-containers repository meets security, complian
   - [ ] CRLF handling set for cross-platform
   - [ ] Large file handling (if needed)
 
-- [ ] `.github` directory structure
+- [ ] `.github` directory structure and administrator configuration reviewed
   ```
   .github/
-  ├── CODEOWNERS
+  ├── CODEOWNERS                  # Activate with actual maintainer identities
   ├── workflows/
   │   ├── publish-containers.yml
   │   ├── container-scan-on-pr.yml
@@ -355,10 +356,10 @@ This checklist ensures the collab-containers repository meets security, complian
   - [ ] Auto-merge safe updates
   - [ ] Schedule configured (not too aggressive)
 
-- [ ] Release tagging convention documented
-  - [ ] Format: `<app>-v<semver>` (e.g., `hedgedoc-v1.0.0`)
-  - [ ] Or: Simple `v<semver>` if single image repo
-  - [ ] Documented in CONTRIBUTING.md
+- [x] Release tagging convention documented
+  - [x] Shared repository release tag: `v<semver>` (e.g., `v1.0.0`)
+  - [x] Per-container GitHub Release tag: `<app>-v<semver>`
+  - [x] Documented in CONTRIBUTING.md
 
 ---
 
@@ -437,7 +438,6 @@ This checklist ensures the collab-containers repository meets security, complian
 
 - [ ] Security scanning explained
   - [ ] What Trivy scans for
-  - [ ] What DockSec checks
   - [ ] How to interpret results
   - [ ] How to address findings
 

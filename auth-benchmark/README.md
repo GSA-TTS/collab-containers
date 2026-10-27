@@ -238,7 +238,7 @@ During live validation of the benchmark cohort in GSA's `staging` environment on
   This completely removes public Gorouter hops from the proxy-to-fixture path, permanently resolving the HTTP `463` loop and increasing routing speed and security.
 
 ### ADR 3: Unverified Email Bypass for Federated Identities (HTTP 500 Resolution)
-* **Context**: Redeeming the OIDC authorization code at the proxy callback returned an HTTP `500` error: `Error redeeming code during OAuth2 callback: email in id_token (john.jediny@gsa.gov) isn't verified`.
+* **Context**: Redeeming the OIDC authorization code at the proxy callback returned an HTTP `500` error: `Error redeeming code during OAuth2 callback: email in id_token (user@example.gov) isn't verified`.
 * **Problem**: `oauth2-proxy` strictly expects the OIDC ID Token to contain a `"email_verified": true` claim. Because Cloud.gov UAA's SAML federation with GSA Secure Auth does not output this specific `"email_verified"` boolean flag in the token claims payload, `oauth2-proxy` rejected the assertion.
 * **Decision**: We enabled `OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL="true"` (equivalent to `--insecure-oidc-allow-unverified-email`). Since all GSA federated accounts are fundamentally verified by GSA Secure Auth/PIV cards during SAML login, this bypass is fully secure and represents the standard configuration pattern for federated OIDC clients on Cloud.gov.
 

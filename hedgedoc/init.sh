@@ -1,20 +1,16 @@
-#!/bin/bash
+#!/bin/sh
+# Entrypoint wrapper. POSIX sh only: the Alpine base image has no bash, openssl or sqlite3.
+set -eu
 
-# Ensure the data directory exists
+# Ensure the data directory exists (HedgeDoc creates the SQLite file itself on first start).
 mkdir -p /data
 
-# Ensure the SQLite database file exists
-if [ ! -f /data/hedgedoc.sqlite ]; then
-  echo "Creating SQLite database file..."
-  sqlite3 /data/hedgedoc.sqlite "VACUUM;"
-fi
-
-# Set a default session secret if not provided
-if [ -z "$CMD_SESSION_SECRET" ]; then
-  CMD_SESSION_SECRET=$(openssl rand -base64 32)
+# Set a random session secret if one was not provided. Without a stable secret,
+# sessions are invalidated on every restart, so set CMD_SESSION_SECRET in production.
+if [ -z "${CMD_SESSION_SECRET:-}" ]; then
+  CMD_SESSION_SECRET=$(node -e 'process.stdout.write(require("crypto").randomBytes(32).toString("base64"))')
   export CMD_SESSION_SECRET
   echo "Session secret not set. Generated a random one."
 fi
 
-# Start the application
 exec "$@"

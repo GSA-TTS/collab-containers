@@ -51,7 +51,6 @@ We follow **coordinated disclosure** principles:
 Every container image is automatically scanned:
 
 - **Trivy** — Vulnerability, configuration, and secret scanning
-- **DockSec** — Comprehensive security analysis
 - **Gitleaks** — Secret detection in git history
 - **Grype** — Dependency vulnerability analysis
 
@@ -65,13 +64,11 @@ Scans run:
 #### Published Releases (GitHub)
 
 1. Navigate to [Releases](https://github.com/GSA-TTS/collab-containers/releases)
-2. Click on a release tag (e.g., `hedgedoc-v1.0.0`)
+2. Click on a per-container release tag (e.g., `hedgedoc-v1.0.0`)
 3. Download attached reports:
    - `trivy-vulnerability-scan.sarif` — Trivy results
    - `sbom-spdx.json` — SPDX Software Bill of Materials
    - `sbom-cyclonedx.json` — CycloneDX SBOM
-   - `docksec-report.html` — DockSec visual report
-   - `docksec-report.json` — DockSec machine-readable
 
 #### GitHub Security Tab
 
@@ -111,7 +108,7 @@ Production images should be hardened using:
 - Security updates applied during rebuilds
 - Secrets supplied through runtime configuration or service bindings
 
-Current image hardening status is tracked by Trivy, DockSec, and Hadolint results. Do not treat an image as production-hardened until those findings are reviewed and resolved or formally accepted.
+Current image hardening status is tracked by Trivy and Hadolint results, and by `docs/IMAGE-VULNERABILITY-REGISTER.md`. Do not treat an image as production-hardened until those findings are reviewed and resolved or formally accepted.
 
 ### Dependency Management
 
@@ -176,7 +173,7 @@ All changes require:
 
 Every pull request runs:
 
-1. **Container Scan** — Trivy + DockSec
+1. **Container Scan** — Trivy
 2. **Secret Scan** — Gitleaks
 3. **Dependency Lint** — Renovate advisory
 4. **Dockerfile Lint** — Hadolint
@@ -232,11 +229,12 @@ Designed for deployment on cloud.gov:
 
 No public advisories are currently published. See GitHub Security tab and release artifacts for active scan findings.
 
-### Public Release Blockers
+### Public Release Gates
 
-- Git history secret findings must be remediated or handled through the security process before publication.
+- Historical Gitleaks findings have documented, fingerprint-scoped acceptance in `GIT_HISTORY_REMEDIATION_PLAN.md`; any new unaccepted finding blocks release.
 - Current-file secret scans must pass before every release.
 - Container and YAML lint findings must be resolved or explicitly documented as accepted risk before public release.
+- Release workflows, GitHub branch protection, code scanning configuration, and required sign-offs must be verified before public release.
 
 ### Known Limitations
 

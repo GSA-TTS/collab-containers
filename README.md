@@ -3,7 +3,7 @@
 
 > A collection of containerized open-source collaboration tools, optimized for deployment on cloud.gov with security scanning and two deployment options (from GHCR registry or local build).
 
-**Status:** Public-release preparation is in progress. Current-file lint, Dockerfile lint, Trivy filesystem scan, and working-tree secret scanning pass. Git history remediation and release workflow verification are still required before making the repository public.
+**Status:** Public-release preparation is in progress. Current-file lint, Dockerfile lint, Trivy filesystem scan, and working-tree secret scanning pass. Historical Gitleaks findings have documented, fingerprint-scoped acceptance. Release workflow verification, GitHub repository configuration, and required sign-offs are still required before making the repository public.
 
 ## 🚀 Quick Start
 
@@ -108,13 +108,12 @@ Use [auth-benchmark](./auth-benchmark/) to compare UAA-backed auth proxies in fr
 
 ## Container Publishing and Findings
 
-This repository includes GitHub Actions workflows to discover every top-level `Dockerfile`, build each container image, scan it with DockSec, and publish it to `ghcr.io`.
+This repository includes GitHub Actions workflows to discover every top-level `Dockerfile`, build each container image, scan it with Trivy, and publish it to `ghcr.io`.
 
 - `publish-containers.yml` runs on published GitHub releases or manual dispatch.
 - Each discovered container is pushed to `ghcr.io/<owner>/<container>:<version>` and `:latest`.
-- DockSec runs in `scan_only` mode by default, so it does not require an LLM API key.
-- DockSec findings are saved as workflow artifacts and attached to each per-container release as JSON, HTML, and CSV reports.
-- The workflow creates a GitHub Release per container, using tags like `<container>-v1.2.3`, and attaches the DockSec reports.
+- Trivy findings are saved as workflow artifacts and attached to each per-container release as a SARIF report, with SPDX and CycloneDX SBOMs.
+- The workflow creates a GitHub Release per container, using tags like `<container>-v1.2.3`, and attaches the Trivy and SBOM reports.
 
 ### How to use it
 
@@ -130,7 +129,6 @@ This repository includes automated GitHub Actions workflows that:
 2. **Build** each container image
 3. **Scan** with multiple tools:
    - **Trivy** — Vulnerability, configuration, and secret scanning (SARIF)
-   - **DockSec** — Comprehensive security analysis (JSON/HTML/CSV)
 4. **Generate** Software Bill of Materials (SBOM)
    - SPDX format (industry standard)
    - CycloneDX format (OWASP standard)
@@ -150,25 +148,19 @@ This repository includes automated GitHub Actions workflows that:
 - Two formats for different compliance needs
 - Transparency for software supply chain
 
-**DockSec Analysis:**
-- Dockerfile best practices
-- Runtime security configuration
-- Layer efficiency analysis
-
 ### Using Published Images
 
 1. **Navigate to [Releases](https://github.com/GSA-TTS/collab-containers/releases)**
 2. **Download security reports:**
    - `trivy-vulnerability-scan.sarif`
    - `sbom-spdx.json` / `sbom-cyclonedx.json`
-   - `docksec-report.html` or `.json`
 3. **Review findings** before production deployment
 4. **Deploy after reviewing reports** using `docker pull ghcr.io/gsa-tts/<app>:<version>`
 
 ### How to Create a Release
 
 1. Ensure GitHub Actions have permission to write packages and contents
-2. Publish a GitHub release with a tag like `hedgedoc-v1.0.0`
+2. Publish a GitHub release with a shared tag like `v1.0.0`
 3. Or run `publish-containers.yml` manually with version `1.0.0`
 4. Review findings in workflow artifacts and per-container GitHub Release
 
@@ -176,7 +168,7 @@ This repository includes automated GitHub Actions workflows that:
 
 - **Container Scan on PR** (`container-scan-on-pr.yml`)
   - Runs on Dockerfile/init.sh changes
-  - Trivy + DockSec scans
+  - Trivy scans
   - Reports in artifacts and GitHub Security tab
 
 - **Publish on Release** (`publish-containers.yml`)
@@ -254,7 +246,6 @@ docker run -it hedgedoc:local
 ### Scanning Tools
 
 - **Trivy** — Container vulnerability and secret scanning
-- **DockSec** — Comprehensive security analysis
 - **Gitleaks** — Git history secret detection
 - **Grype** — Dependency vulnerability analysis
 - **Hadolint** — Dockerfile best practices linting
@@ -268,8 +259,8 @@ See [SECURITY.md](./SECURITY.md) for vulnerability reporting and compliance deta
 This repo is set up for the GSA-TTS centralized scanning service.
 
 - `renovate.json` extends `local>GSA-TTS/scanning-service:default.json5`.
-- `.github/workflows/dependency-lint.yml` adds the org dependency lint PR check in advisory mode.
-- `.github/workflows/secret-scan.yml` adds the org secret scan PR check in advisory mode.
+- `.github/workflows/dependency-lint.yml` adds the org dependency lint PR check as a required gate.
+- `.github/workflows/secret-scan.yml` adds the org secret scan PR check as a required gate.
 - `.githooks/pre-commit` runs `gitleaks detect --staged` for local secret scanning.
 
 ### Remaining manual onboarding steps

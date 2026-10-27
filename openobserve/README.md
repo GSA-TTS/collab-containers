@@ -68,7 +68,7 @@ You'll be redirected to Cloud.gov UAA for authentication. Only `@gsa.gov` email 
 **API Access**: Use Basic Auth with your OpenObserve credentials:
 
 ```bash
-curl -u "root@example.com:Complexpass#123" \
+curl -u "$OPENOBSERVE_USER:$OPENOBSERVE_PASSWORD" \
   https://openobserve-staging.app.cloud.gov/api/default/default/_json \
   -H "Content-Type: application/json" \
   -d '[{"message": "test log", "level": "info"}]'
@@ -112,13 +112,13 @@ Authentication: Basic Auth (ZO_ROOT_USER_EMAIL:ZO_ROOT_USER_PASSWORD)
 
 ```bash
 # JSON logs
-curl -u "root@example.com:Complexpass#123" \
+curl -u "$OPENOBSERVE_USER:$OPENOBSERVE_PASSWORD" \
   https://openobserve-staging.app.cloud.gov/api/default/default/_json \
   -H "Content-Type: application/json" \
   -d '[{"message": "hello", "level": "info", "app": "myapp"}]'
 
 # Bulk ingestion
-curl -u "root@example.com:Complexpass#123" \
+curl -u "$OPENOBSERVE_USER:$OPENOBSERVE_PASSWORD" \
   https://openobserve-staging.app.cloud.gov/api/default/default/_bulk \
   -H "Content-Type: application/json" \
   -d '{"index": {}}
