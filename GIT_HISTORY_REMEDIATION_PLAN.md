@@ -3,7 +3,7 @@ title: "Git History Remediation Plan"
 description: "Non-destructive plan for resolving redacted Gitleaks findings before public release"
 status: draft
 tier: 2
-last_updated: "2026-09-11"
+last_updated: "2026-10-28"
 ---
 
 # Git History Remediation Plan
@@ -45,6 +45,19 @@ An authorized Cloud.gov inventory of the currently targeted `<org>/dev` space on
 Initial triage should classify each row as real credential, generated secret, placeholder, or scanner false positive. Treat unknowns as potentially exposed credentials until a security owner decides otherwise.
 
 Review outcome: the initial nine rows were confirmed harmless by the repository owner on 2026-09-11, and the four OpenObserve `curl-auth-user` examples were confirmed harmless on 2026-10-05. All are accepted with exact Gitleaks fingerprints in `.gitleaksignore`. This avoids rewriting repository history while keeping future unrelated findings visible.
+
+## Decision (2026-10-28)
+
+Under authority delegated by the repository owner, the agent chose **documented acceptance (option a), not a history rewrite**. This decision is recorded here and on issue #27 and still needs owner confirmation before the repository is made public.
+
+Rationale:
+
+- The owner confirmed on 2026-09-11, 2026-10-05 and 2026-10-22 that the findings are generic examples, were destroyed, or were rotated or never used.
+- A full-history Gitleaks scan with the allowlist file disabled (`--gitleaks-ignore-path /dev/null`) reports no leaks on 2026-10-28, so the fingerprint acceptances cover only what the scanner already flags with the repo's own config.
+- A rewrite is destructive: it changes every commit SHA, invalidates open PRs and forks, and requires a freeze window and force-push, none of which the agent should do unilaterally.
+- Tracked `vars.yml` files for `backstage` and `auth-benchmark/*` remain in history (they were added at commits before 2026-10-22). The owner states their credentials were rotated or never used.
+
+Residual risk: anyone who clones after publication keeps this history, and a rewrite later will not recall earlier clones. If the owner has any doubt about those `vars.yml` values, rotate them and use the dry-run procedure below before changing visibility.
 
 ## Guardrails
 

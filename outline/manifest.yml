@@ -6,7 +6,7 @@ applications:
     disk_quota: 1G
     instances: 1
     docker:
-      image: outlinewiki/outline:latest
+      image: outlinewiki/outline:1.12.0
     routes:
       - route: outline.app.cloud.gov
     env:

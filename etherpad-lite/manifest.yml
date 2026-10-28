@@ -5,7 +5,7 @@ applications:
     disk_quota: 1G
     instances: 1
     docker:
-      image: etherpad/etherpad:latest
+      image: etherpad/etherpad:3.3.12
     routes:
       - route: etherpad.app.cloud.gov
     env:

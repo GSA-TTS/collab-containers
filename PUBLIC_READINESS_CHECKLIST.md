@@ -2,9 +2,25 @@
 
 This checklist ensures the collab-containers repository meets security, compliance, and quality standards before public release.
 
-**Current Status:** Current-file lint, Dockerfile lint, Trivy filesystem scan, and Gitleaks working-tree scan pass. Historical Gitleaks findings have documented, fingerprint-scoped acceptance. Public release remains blocked until release workflows, GitHub repository settings, and required sign-offs are verified.
+**Current Status (updated 2026-10-28): NOT READY for public release, pending human actions.** Repository content, scans, the `main` ruleset, and a first publish run (`0.1.0-rc1`, pre-release) are done and verified. What remains cannot be done by an agent: independent review and approval, the three sign-offs, Allstar administrator assignment, and Backstage runtime verification. Only items verified on 2026-10-28 are ticked; everything else is unverified, not failed.
 
-**Release Version:** ___________
+### Open blockers
+
+| # | Blocker | Needed from | Tracking |
+|---|---|---|---|
+| 1 | Allstar reports no repository administrator or team. Two individuals have admin, but no team does | Org admin: assign an admin team (Settings -> Manage Access) | Allstar #3 |
+| 2 | Pull requests now need 1 approving review and the repo has no bypass actors, so PR #29 and every later PR needs a second maintainer | Add at least one more maintainer/reviewer | #25 |
+| 3 | Vulnerability register rows need human review (hedgedoc 87 Node findings incl. 10 CRITICAL; backstage 43 OS + 34 Node incl. 2 CRITICAL) | Security reviewer | #26 |
+| 4 | Backstage image has never been run against a database (native modules `better-sqlite3`, `keytar` unverified at runtime) | Anyone with Docker on an amd64 host or a cloud.gov dev space | #28 |
+| 5 | Git history: acceptance recorded by the agent under owner delegation; needs owner confirmation | Repository owner | #27 |
+| 6 | Sign-offs, final release version and date | Technical, Security, Compliance reviewers | this file |
+| 7 | Visibility change to public | Repository owner, after 1-6 | this file |
+
+Done 2026-10-28: `main` ruleset enforced (1 approval, stale reviews dismissed, thread resolution, Secret Scan and Dependency Lint required, no deletion or force-push); secret scanning push protection and Code Security enabled; default workflow token read-only and Actions cannot approve PRs; description and topics set; `LICENSE` replaced with the standard CC0 1.0 legal text; `CODEOWNERS` set to the maintainer (code-owner review deliberately not required); `publish-containers.yml` run 40690698429 succeeded for hedgedoc and backstage (see below); all `:latest` manifest references pinned.
+
+Container Scan is not a required check because it only runs when Dockerfiles or scan config change, so requiring it would block every other PR.
+
+**Release Version:** ___________ (`0.1.0-rc1` published as a pre-release on 2026-10-28 for verification only)
 **Release Date:** ___________
 **Reviewed By:** ___________
 
@@ -19,24 +35,24 @@ This checklist ensures the collab-containers repository meets security, complian
   mise run scan:dockerfile
   ```
 
-- [ ] All container images scanned with Trivy
+- [x] All container images scanned with Trivy (publish run 40690698429)
   ```bash
   mise run container:build-all
   mise run scan:trivy-container <image-name>
   ```
 
-- [ ] Every HIGH/CRITICAL Trivy finding is either fixed or recorded in
+- [x] Every HIGH/CRITICAL Trivy finding is either fixed or recorded in
   `docs/IMAGE-VULNERABILITY-REGISTER.md` with an owner decision (findings are non-blocking by policy)
   ```bash
   # Verify: trivy-findings-*.txt and the job summary were reviewed against the register
   ```
 
-  - [ ] Record unresolved findings in `docs/IMAGE-VULNERABILITY-REGISTER.md` (non-blocking by policy)
+  - [x] Record unresolved findings in `docs/IMAGE-VULNERABILITY-REGISTER.md` (non-blocking by policy; human review still open)
 
-- [ ] SBOMs generated for all images
-  - [ ] SPDX format: `sbom-*-spdx.json`
-  - [ ] CycloneDX format: `sbom-*-cyclonedx.json`
-  - [ ] Files checked into release artifacts
+- [x] SBOMs generated for all images
+  - [x] SPDX format: `sbom-*-spdx.json`
+  - [x] CycloneDX format: `sbom-*-cyclonedx.json`
+  - [x] Files attached to the `hedgedoc-v0.1.0-rc1` and `backstage-v0.1.0-rc1` releases
 
 ### Source Code
 
@@ -54,14 +70,14 @@ This checklist ensures the collab-containers repository meets security, complian
   # Should return no sensitive values
   ```
 
-- [ ] `.gitignore` includes all sensitive files
-  - [ ] `*.env` files (except `.env.example`)
-  - [ ] `*.key`, `*.pem`, `*.p12`
-  - [ ] `cosign.key` (private signing key)
+- [ ] `.gitignore` includes all sensitive files (Node and Python entries not present)
+  - [x] `*.env` files (except `.env.example`)
+  - [x] `*.key`, `*.pem`, `*.p12`
+  - [x] `cosign.key` (private signing key)
   - [ ] Node: `node_modules/`, `package-lock.json`
   - [ ] Python: `__pycache__/`, `.venv/`, `*.egg-info/`
 
-- [ ] Pre-commit hooks configured
+- [x] Pre-commit hooks configured
   ```bash
   chmod +x .githooks/pre-commit
   git config core.hooksPath .githooks
@@ -76,13 +92,13 @@ This checklist ensures the collab-containers repository meets security, complian
 
 - [ ] Dependencies use pinned (not floating) versions
   - [ ] `package.json`: No `^` or `~` in production deps
-  - [ ] `Dockerfile`: Specific image tags (not `latest`)
+  - [x] `Dockerfile`: Specific image tags (not `latest`)
   - [ ] `renovate.json`: Automatic updates configured
 
 - [ ] All dependencies have approved licenses
   - [ ] No GPL, AGPL in production code (if restricted)
   - [ ] License declarations documented
-  - [ ] `LICENSE` file present (CC0 1.0 confirmed)
+  - [x] `LICENSE` file present (CC0 1.0 confirmed)
 
 ---
 
@@ -91,7 +107,7 @@ This checklist ensures the collab-containers repository meets security, complian
 ### Code Structure
 
 - [ ] Code is well-organized and documented
-  - [ ] Each app directory has a `README.md`
+  - [x] Each app directory has a `README.md`
   - [ ] Dockerfile includes inline comments for complex steps
   - [ ] Shell scripts include shebang and comments
 
@@ -123,10 +139,10 @@ This checklist ensures the collab-containers repository meets security, complian
   - [ ] Security scanning steps included
   - [ ] Production checklist provided
 
-- [ ] `CONTRIBUTING.md` exists (if accepting contributions)
-  - [ ] Development setup documented
-  - [ ] Testing requirements clear
-  - [ ] Pull request process defined
+- [x] `CONTRIBUTING.md` exists (if accepting contributions)
+  - [x] Development setup documented
+  - [x] Testing requirements clear
+  - [x] Pull request process defined
 
 - [ ] Individual app READMEs documented
   - [ ] Environment variables listed
@@ -145,13 +161,13 @@ This checklist ensures the collab-containers repository meets security, complian
 ### Dockerfile Quality
 
 - [ ] All Dockerfiles follow best practices
-  - [ ] Use specific base image versions (not `latest`)
+  - [x] Use specific base image versions (not `latest`)
   - [ ] Minimal required packages installed
   - [ ] Cache layers optimized (frequently changed at end)
   - [ ] Multi-stage builds used where appropriate
 
 - [ ] Security hardening applied
-  - [ ] Run as non-root user
+  - [x] Run as non-root user
   - [ ] No unnecessary tools in base image
   - [ ] File permissions restricted
   - [ ] No setuid/setgid binaries
@@ -177,19 +193,19 @@ This checklist ensures the collab-containers repository meets security, complian
 ### Registry Publishing
 
 - [ ] GitHub Actions workflows are configured
-  - [ ] `publish-containers.yml` runs on release
-  - [ ] `container-scan-on-pr.yml` runs on PRs
-  - [ ] Workflows have appropriate permissions
+  - [x] `publish-containers.yml` runs on release (configured; **never executed**)
+  - [x] `container-scan-on-pr.yml` runs on PRs
+  - [x] Workflows have appropriate permissions (SHA-pinned actions, scoped permissions)
   - [ ] Token/secret permissions correctly scoped
 
-- [ ] Container images push to GHCR
-  - [ ] `ghcr.io/gsa-tts/<app>:latest` exists
-  - [ ] `ghcr.io/gsa-tts/<app>:v<version>` exists
-  - [ ] Version tags follow semantic versioning
+- [x] Container images push to GHCR (publish job logs show digests pushed for `v0.1.0-rc1` and `latest`; a pull attempt with the local token was denied, likely missing `read:packages` scope, so image pullability is unverified)
+  - [x] `ghcr.io/gsa-tts/<app>:latest` exists (hedgedoc, backstage)
+  - [x] `ghcr.io/gsa-tts/<app>:v<version>` exists (`v0.1.0-rc1`)
+  - [ ] Version tags follow semantic versioning (`v0.1.0-rc1` is semver; final version not chosen)
 
-- [ ] Release artifacts are attached
-  - [ ] Trivy SARIF report attached
-  - [ ] SBOM files (SPDX, CycloneDX) attached
+- [x] Release artifacts are attached
+  - [x] Trivy SARIF report attached
+  - [x] SBOM files (SPDX, CycloneDX) attached
 
 ---
 
@@ -204,20 +220,20 @@ This checklist ensures the collab-containers repository meets security, complian
 
 - [ ] License is properly configured
   - [ ] CC0 1.0 Public Domain Dedication (confirmed in this repo)
-  - [ ] `LICENSE` file exists at repo root
-  - [ ] GitHub license selector recognizes it
+  - [x] `LICENSE` file exists at repo root
+  - [x] GitHub license selector recognizes it (standard CC0 text committed; confirm on GitHub after merge)
 
 ### Permissions & Security
 
-- [ ] Branch protection rules configured
-  - [ ] `main` branch requires pull request reviews
-  - [ ] Require status checks to pass before merge
-  - [ ] Dismiss stale pull request approvals on push
-  - [ ] Restrict who can push to matching branches
+- [x] Branch protection rules configured (ruleset `main`, active)
+  - [x] `main` branch requires pull request reviews (1)
+  - [x] Require status checks to pass before merge (Secret Scan, Dependency Lint)
+  - [x] Dismiss stale pull request approvals on push
+  - [x] Restrict who can push to matching branches (PR required; no bypass actors)
 
 - [ ] Signing requirements (optional but recommended)
   - [ ] Require signed commits (if applicable)
-  - [ ] Or: Document signing recommendations in CONTRIBUTING.md
+  - [ ] Or: Document signing recommendations in CONTRIBUTING.md (not done; optional)
 
 - [ ] Secrets management configured
   - [ ] No repository secrets exposed in workflows
@@ -226,34 +242,37 @@ This checklist ensures the collab-containers repository meets security, complian
 
 ### Issue & Pull Request Management
 
-- [ ] Issue templates created
+- [x] Issue templates created
 - [x] `ISSUE_TEMPLATE/bug_report.md`
 - [x] `ISSUE_TEMPLATE/feature_request.md`
 
-- [ ] Pull request template created
+- [x] Pull request template created
 - [x] `.github/pull_request_template.md` exists
 - [x] Includes security checklist
 
 - [ ] Contributor guidelines clear
-  - [ ] `CONTRIBUTING.md` exists or in README
+  - [x] `CONTRIBUTING.md` exists or in README
   - [ ] Code of conduct documented (if applicable)
-  - [ ] Reporting security vulnerabilities explained (see below)
+  - [x] Reporting security vulnerabilities explained (see below)
 
 ### Scanning & Automation
 
 - [ ] Dependabot/Renovate configured
-  - [ ] `renovate.json` present and extends GSA-TTS config
+  - [x] `renovate.json` present and extends GSA-TTS config
   - [ ] Automated dependency updates enabled
   - [ ] Security update PRs created automatically
 
 - [ ] Secret scanning enabled and required by branch protection
-  - [ ] `.github/workflows/secret-scan.yml` present
-  - [ ] Gitleaks pre-commit hook configured
+  - [x] `.github/workflows/secret-scan.yml` present
+  - [x] Gitleaks pre-commit hook configured
+  - [x] Push protection enabled (2026-10-28)
+  - [x] Required by branch protection
   - [ ] Prevent secrets from being committed
 
 - [ ] Code scanning enabled and required by branch protection
-  - [ ] `.github/workflows/dependency-lint.yml` configured
-  - [ ] Trivy scanning in container workflows
+  - [x] `.github/workflows/dependency-lint.yml` configured
+  - [x] Trivy scanning in container workflows
+  - [x] Code Security enabled (2026-10-28)
   - [ ] SARIF reports uploaded to GitHub Security tab
 
 ### Settings Best Practices
@@ -291,9 +310,9 @@ This checklist ensures the collab-containers repository meets security, complian
 ### Documentation Requirements
 
 - [ ] Security policy documented
-  - [ ] `SECURITY.md` exists
-  - [ ] Vulnerability disclosure process clear
-  - [ ] Contact information provided
+  - [x] `SECURITY.md` exists
+  - [x] Vulnerability disclosure process clear
+  - [x] Contact information provided
 
 - [ ] Support & maintenance expectations clear
   - [ ] README clarifies ephemeral/prototype nature
@@ -385,19 +404,19 @@ This checklist ensures the collab-containers repository meets security, complian
 ### Automated Testing
 
 - [ ] GitHub Actions workflows pass
-  - [ ] Secret scan succeeds
-  - [ ] Dependency lint succeeds
-  - [ ] Container scan succeeds
-  - [ ] Build succeeds
+  - [x] Secret scan succeeds
+  - [x] Dependency lint succeeds
+  - [x] Container scan succeeds (last on PR #24)
+  - [x] Build succeeds (publish run 40690698429)
 
 - [ ] Pull request checks pass
   - [ ] All required status checks enabled
   - [ ] No green checkmarks skipped
 
 - [ ] Release artifacts verified
-  - [ ] Images push to GHCR successfully
-  - [ ] Scan reports generated and attached
-  - [ ] Release notes created
+  - [x] Images push to GHCR successfully
+  - [x] Scan reports generated and attached
+  - [x] Release notes created (auto-generated; the draft text promises "Gitleaks" and "CodeQL" which the job does not run)
 
 ---
 
@@ -449,12 +468,12 @@ This checklist ensures the collab-containers repository meets security, complian
 
 - [ ] Repository follows GSA-TTS conventions
   - [ ] Org: `github.com/GSA-TTS/`
-  - [ ] Topic tags added: `collaboration`, `containers`, `federal`
-  - [ ] Description includes "GSA" or "Federal"
+  - [x] Topic tags added: `collaboration`, `containers`, `federal`
+  - [x] Description includes "GSA" or "Federal"
 
-- [ ] AGENTS.md configured (if using AI assistance)
-  - [ ] Behavioral rules documented
-  - [ ] Security constraints specified
+- [x] AGENTS.md configured (if using AI assistance)
+  - [x] Behavioral rules documented
+  - [x] Security constraints specified
   - [ ] Approval workflows defined
 
 - [ ] Scanning service integrated

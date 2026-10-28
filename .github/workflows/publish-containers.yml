@@ -227,9 +227,8 @@ jobs:
           This release includes:
           - **Trivy** vulnerability scan (SARIF format)
           - **SBOM** (Software Bill of Materials) in SPDX and CycloneDX formats
-          - **CodeQL** integration for GitHub Security tab
 
-          Review the attached reports to verify security compliance before deployment.
+          Findings are recorded, not blocking. Review the attached reports and docs/IMAGE-VULNERABILITY-REGISTER.md before deployment.
 
           ## Deployment Options
 
@@ -248,8 +247,7 @@ jobs:
 
           ## Verification
           All images are scanned with:
-          - Trivy (vulnerability & configuration)
-          - Gitleaks (secret detection)
+          - Trivy (vulnerability, configuration and secret scanning)
 
           Reports attached to this release.
           EOF

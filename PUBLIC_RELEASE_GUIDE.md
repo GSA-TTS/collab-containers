@@ -4,7 +4,7 @@
 
 This guide walks through the complete process of preparing collab-containers for public release, with emphasis on security scanning, compliance, and deployment flexibility.
 
-**Status:** Public-release preparation is in progress. Current-file lint, Dockerfile lint, Trivy filesystem scan, and Gitleaks working-tree scan pass. Historical Gitleaks findings were accepted through a fingerprint-scoped security review. Do not make the repository public until release workflows complete successfully and required GitHub repository settings and sign-offs are verified.
+**Status (2026-10-28):** Not ready for public release. Scans pass, the `main` ruleset is enforced, and a test publish (`0.1.0-rc1`) succeeded. Still needed from people: administrator assignment, human review of the vulnerability register, Backstage runtime verification, owner confirmation of the history decision, and the three sign-offs. See [PUBLIC_READINESS_CHECKLIST.md](./PUBLIC_READINESS_CHECKLIST.md).
 
 ---
 
@@ -414,12 +414,12 @@ curl https://mise.jdx.dev/install.sh | sh
 ✅ Documentation for users, developers, and operators
 ✅ Public readiness checklist with sign-off tracking
 
-Remaining blockers before publication: resolve required lint/container findings, verify release workflows in GitHub Actions, configure required GitHub repository settings, and complete the checklist sign-offs. Historical Gitleaks findings have documented, fingerprint-scoped acceptance in `GIT_HISTORY_REMEDIATION_PLAN.md`.
+Remaining blockers before publication are listed in [PUBLIC_READINESS_CHECKLIST.md](./PUBLIC_READINESS_CHECKLIST.md#open-blockers). Historical Gitleaks findings have documented, fingerprint-scoped acceptance in `GIT_HISTORY_REMEDIATION_PLAN.md`; the final accept-or-rewrite decision is tracked in issue #27.
 
 **Next Step:** Review [PUBLIC_READINESS_CHECKLIST.md](./PUBLIC_READINESS_CHECKLIST.md) before first public release.
 
 ---
 
-**Last Updated:** 2026-09-11
+**Last Updated:** 2026-10-28
 **Version:** 1.0.0
 **License:** CC0 1.0 Public Domain Dedication

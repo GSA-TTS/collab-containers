@@ -6,7 +6,7 @@ applications:
     disk_quota: 1G
     instances: 1
     docker:
-      image: ghcr.io/plankanban/planka:latest
+      image: ghcr.io/plankanban/planka:2.2.1
     routes:
       - route: planka.app.cloud.gov
     env:
