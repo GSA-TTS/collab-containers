@@ -3,14 +3,25 @@
 
 > A collection of containerized open-source collaboration tools, optimized for deployment on cloud.gov with security scanning and two deployment options (from GHCR registry or local build).
 
-**Status:** Public-release preparation is in progress. Current-file lint, Dockerfile lint, Trivy filesystem scan, and working-tree secret scanning pass. Historical Gitleaks findings have documented, fingerprint-scoped acceptance. Release workflow verification, GitHub repository configuration, and required sign-offs are still required before making the repository public.
+**Status (2026-10-28): not yet approved for public release.** The repository is private/internal until the owner approves visibility.
+
+| Area | State |
+|---|---|
+| Secret scanning | Gitleaks passes on git history (historical findings accepted per fingerprint in `.gitleaksignore`). Push protection is enabled on GitHub. |
+| Images | `hedgedoc` and `backstage` are built and scanned by Trivy on pull requests; findings are recorded in [`docs/IMAGE-VULNERABILITY-REGISTER.md`](./docs/IMAGE-VULNERABILITY-REGISTER.md), not blocking. Backstage has not been run against a database. |
+| Third-party manifests | No `:latest` references remain; images are pinned to release tags (Excalidraw by digest). They are not built or scanned here. |
+| Publishing | `publish-containers.yml` has **never run**. No images, SBOMs or releases exist on GHCR yet, so the `docker pull ghcr.io/...` examples below will not work until the first release. |
+| Repository settings | The `main` ruleset is not enforced, no administrator is assigned, and `CODEOWNERS` has no owners. |
+| Sign-offs | Technical, security and compliance reviews are not done. |
+
+See [PUBLIC_READINESS_CHECKLIST.md](./PUBLIC_READINESS_CHECKLIST.md) for the open blockers and tracking issues.
 
 ## 🚀 Quick Start
 
 ### For Users (Deploy Pre-Built Image)
 
 ```bash
-# Pull and run (fastest, recommended for most users)
+# Available after the first release is published (none exists yet)
 docker pull ghcr.io/gsa-tts/hedgedoc:v1.0.0
 docker run -it ghcr.io/gsa-tts/hedgedoc:v1.0.0
 ```
@@ -35,7 +46,7 @@ mise run scan:all              # Run all security checks
 | [**PUBLIC_RELEASE_GUIDE.md**](./PUBLIC_RELEASE_GUIDE.md) | Everyone | Overview of current capabilities, options, and remaining blockers |
 | [**DEPLOYMENT.md**](./DEPLOYMENT.md) | Operators | Complete deployment guide: registry vs local build, security, production checklist |
 | [**SECURITY.md**](./SECURITY.md) | Security teams | Vulnerability reporting, scanning practices, compliance standards |
-| [**PUBLIC_READINESS_CHECKLIST.md**](./PUBLIC_READINESS_CHECKLIST.md) | Release managers | 100+ checklist items before public release, sign-off tracking |
+| [**PUBLIC_READINESS_CHECKLIST.md**](./PUBLIC_READINESS_CHECKLIST.md) | Release managers | Release checklist with verified status, open blockers, and sign-off tracking |
 | [**mise.toml**](./mise.toml) | Developers | 30+ runnable tasks for security scanning, building, signing containers |
 
 **Start here:** [PUBLIC_RELEASE_GUIDE.md](./PUBLIC_RELEASE_GUIDE.md)
@@ -52,6 +63,8 @@ mise run scan:all              # Run all security checks
 | [Planka](https://github.com/plankanban/planka)      | ❌ Failing | 🚫 Required (oauth2-proxy) | Database resolved, but Cloud.gov SAML split-domain session cookie is stripped by browser (SameSite block). | [planka](./planka/) |
 | [CryptPad](https://github.com/xwiki-labs/cryptpad)    | ✅ Working | ✅ Yes (oauth2-proxy) |                      | [cryptpad](./cryptpad/) |
 | [Backstage](https://github.com/backstage/backstage)  | ✅ Working | ✅ Yes (oauth2-proxy) |                      | [backstage](./backstage/) |
+| [Etherpad](https://github.com/ether/etherpad) | ❔ Untested | — | No recorded deployment result. | [etherpad-lite](./etherpad-lite/) |
+| [OpenObserve](https://github.com/openobserve/openobserve) | ❔ Untested | ✅ Yes (oauth2-proxy) | No recorded deployment result. | [openobserve](./openobserve/) |
 | Auth proxy benchmark | 🧪 Experimental | — | Cloud.gov UAA benchmark harness and proxy manifests. | [auth-benchmark](./auth-benchmark/) |
 
 ## Others?

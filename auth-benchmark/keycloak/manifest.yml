@@ -12,7 +12,7 @@ applications:
     health-check-invocation-timeout: 30
     timeout: 180
     docker:
-      image: ghcr.io/gsa-tts/terraform-cloudgov/keycloak-server:latest
+      image: ghcr.io/gsa-tts/terraform-cloudgov/keycloak-server:20261025
     routes:
       - route: ((public_host))
     env:
