@@ -3,25 +3,25 @@
 
 > A collection of containerized open-source collaboration tools, optimized for deployment on cloud.gov with security scanning and two deployment options (from GHCR registry or local build).
 
-**Status (2026-10-28): not yet approved for public release.** The repository is private/internal until the owner approves visibility.
+**Status (2026-10-28): not yet approved for public release.** The repository stays private/internal until the owner approves visibility.
 
 | Area | State |
 |---|---|
-| Secret scanning | Gitleaks passes on git history (historical findings accepted per fingerprint in `.gitleaksignore`). Push protection is enabled on GitHub. |
-| Images | `hedgedoc` and `backstage` are built and scanned by Trivy on pull requests; findings are recorded in [`docs/IMAGE-VULNERABILITY-REGISTER.md`](./docs/IMAGE-VULNERABILITY-REGISTER.md), not blocking. Backstage has not been run against a database. |
+| Secret scanning | Gitleaks passes on git history, including with the allowlist disabled. Historical findings are accepted per fingerprint in `.gitleaksignore`; see `GIT_HISTORY_REMEDIATION_PLAN.md`. Push protection is enabled on GitHub. |
+| Images | `hedgedoc` and `backstage` build and scan in CI. Findings are recorded, not blocking, in [`docs/IMAGE-VULNERABILITY-REGISTER.md`](./docs/IMAGE-VULNERABILITY-REGISTER.md) and still need human review. Backstage has not been run against a database. |
 | Third-party manifests | No `:latest` references remain; images are pinned to release tags (Excalidraw by digest). They are not built or scanned here. |
-| Publishing | `publish-containers.yml` has **never run**. No images, SBOMs or releases exist on GHCR yet, so the `docker pull ghcr.io/...` examples below will not work until the first release. |
-| Repository settings | The `main` ruleset is not enforced, no administrator is assigned, and `CODEOWNERS` has no owners. |
+| Publishing | `publish-containers.yml` ran once (`0.1.0-rc1`, 2026-10-28). Two pre-releases exist with SARIF and SBOM assets. Treat that run as a test: the `v1.0.0` examples below do not exist yet. |
+| Repository settings | `main` ruleset is enforced (1 review, Secret Scan and Dependency Lint required, no force-push). Allstar still reports no administrator team. |
 | Sign-offs | Technical, security and compliance reviews are not done. |
 
-See [PUBLIC_READINESS_CHECKLIST.md](./PUBLIC_READINESS_CHECKLIST.md) for the open blockers and tracking issues.
+See [PUBLIC_READINESS_CHECKLIST.md](./PUBLIC_READINESS_CHECKLIST.md) for the open blockers.
 
 ## 🚀 Quick Start
 
 ### For Users (Deploy Pre-Built Image)
 
 ```bash
-# Available after the first release is published (none exists yet)
+# Example only: no v1.0.0 exists yet (0.1.0-rc1 is a test pre-release)
 docker pull ghcr.io/gsa-tts/hedgedoc:v1.0.0
 docker run -it ghcr.io/gsa-tts/hedgedoc:v1.0.0
 ```

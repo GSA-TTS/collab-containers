@@ -1,5 +1,4 @@
-# Add authorized GitHub user or team identities before enabling required code-owner
-# reviews in branch protection. Do not use this placeholder as an access-control rule.
-#
-# Example:
-# * @GSA-TTS/collab-containers-maintainers
+# Default owner for all paths. Replace or extend with a GitHub team once one exists.
+# Code-owner review is intentionally NOT required in the main ruleset: with a single
+# listed owner, that owner could not approve their own pull requests.
+* @JJediny

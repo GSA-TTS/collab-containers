@@ -4,7 +4,7 @@
 
 This guide walks through the complete process of preparing collab-containers for public release, with emphasis on security scanning, compliance, and deployment flexibility.
 
-**Status (2026-10-28):** Not ready for public release. Local and pull-request scans pass, and the vulnerability register is in place. Still open: enforcing the `main` ruleset and assigning administrators and code owners, the Git history decision, a first successful run of the publish workflow, human review of the vulnerability register, and the three sign-offs. See [PUBLIC_READINESS_CHECKLIST.md](./PUBLIC_READINESS_CHECKLIST.md).
+**Status (2026-10-28):** Not ready for public release. Scans pass, the `main` ruleset is enforced, and a test publish (`0.1.0-rc1`) succeeded. Still needed from people: administrator assignment, human review of the vulnerability register, Backstage runtime verification, owner confirmation of the history decision, and the three sign-offs. See [PUBLIC_READINESS_CHECKLIST.md](./PUBLIC_READINESS_CHECKLIST.md).
 
 ---
 
